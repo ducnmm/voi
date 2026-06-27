@@ -1,0 +1,373 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  OPEN
+}
+
+enum GroupRole {
+  HOST
+  MEMBER
+}
+
+enum SessionVisibility {
+  PRIVATE_LINK
+  GROUP_ONLY
+}
+
+enum SessionStatus {
+  DRAFT
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum RsvpStatus {
+  JOINED
+  MAYBE
+  DECLINED
+  WAITLISTED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  NOT_REQUIRED
+  UNPAID
+  PAID
+}
+
+enum NotificationType {
+  SESSION_REMINDER
+  WAITLIST_PROMOTION
+  SESSION_CANCELLED
+  SESSION_CHANGED
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum PushPlatform {
+  IOS
+}
+
+enum AuthProvider {
+  GOOGLE
+  APPLE
+}
+
+model User {
+  id                String               @id @default(cuid())
+  email             String               @unique
+  displayName       String               @map("display_name")
+  avatarUrl         String?              @map("avatar_url")
+  defaultSkillLevel SkillLevel           @default(OPEN) @map("default_skill_level")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  createdGroups     Group[]              @relation("GroupCreator")
+  groupMemberships  GroupMember[]
+  hostedSessions    Session[]            @relation("SessionHost")
+  participations    SessionParticipant[]
+  notifications     Notification[]
+  pushDevices       PushDevice[]
+  notificationPref  NotificationPreference?
+  following         Follow[]       @relation("Follower")
+  followers         Follow[]       @relation("Followee")
+  savedSessions     SavedSession[]
+  reviewsReceived   Review[]       @relation("ReviewSubject")
+  reviewsAuthored   Review[]       @relation("ReviewAuthor")
+  chatMessages      ChatMessage[]
+  authIdentities    AuthIdentity[]
+  refreshTokens     RefreshToken[]
+
+  @@map("users")
+}
+
+model PushDevice {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id")
+  platform    PushPlatform @default(IOS)
+  deviceToken String       @unique @map("device_token")
+  appVersion  String?      @map("app_version")
+  disabledAt  DateTime?    @map("disabled_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_devices")
+}
+
+model NotificationPreference {
+  id                    String   @id @default(cuid())
+  userId                String   @unique @map("user_id")
+  remindersEnabled      Boolean  @default(true) @map("reminders_enabled")
+  statusChangesEnabled  Boolean  @default(true) @map("status_changes_enabled")
+  waitlistEnabled       Boolean  @default(true) @map("waitlist_enabled")
+  reminderLeadMinutes   Int      @default(120) @map("reminder_lead_minutes")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model Group {
+  id                String        @id @default(cuid())
+  name              String
+  description       String?
+  defaultVenueName  String?       @map("default_venue_name")
+  defaultSkillLevel SkillLevel    @default(OPEN) @map("default_skill_level")
+  currency          String        @default("VND")
+  createdByUserId   String        @map("created_by_user_id")
+  createdBy         User          @relation("GroupCreator", fields: [createdByUserId], references: [id])
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  members           GroupMember[]
+  sessions          Session[]
+  invites           Invite[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id       String    @id @default(cuid())
+  groupId  String    @map("group_id")
+  userId   String    @map("user_id")
+  role     GroupRole @default(MEMBER)
+  joinedAt DateTime  @default(now()) @map("joined_at")
+  group    Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model Session {
+  id                 String              @id @default(cuid())
+  groupId            String              @map("group_id")
+  hostUserId         String              @map("host_user_id")
+  title              String?
+  startsAt           DateTime            @map("starts_at")
+  endsAt             DateTime            @map("ends_at")
+  venueName          String              @map("venue_name")
+  venueNote          String?             @map("venue_note")
+  courtCount         Int                 @map("court_count")
+  maxPlayers         Int                 @map("max_players")
+  feeTotalVnd        Int?                @map("fee_total_vnd")
+  shuttlecockCostVnd Int?                @map("shuttlecock_cost_vnd")
+  currency            String             @default("VND")
+  skillLevel          SkillLevel         @default(OPEN) @map("skill_level")
+  visibility          SessionVisibility  @default(PRIVATE_LINK)
+  status              SessionStatus      @default(SCHEDULED)
+  costTrackingEnabled Boolean            @default(false) @map("cost_tracking_enabled")
+  feePerPlayerVnd     Int?               @map("fee_per_player_vnd")
+  venueLat            Float?             @map("venue_lat")
+  venueLng            Float?             @map("venue_lng")
+  imageUrls           String[]           @default([]) @map("image_urls")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  group              Group               @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  host               User                @relation("SessionHost", fields: [hostUserId], references: [id])
+  courts             Court[]
+  invites            Invite[]
+  participants       SessionParticipant[]
+  lineupSlots        LineupSlot[]
+  notifications      Notification[]
+  matchResults       MatchResult[]
+  savedBy            SavedSession[]
+  reviews            Review[]
+  chatMessages       ChatMessage[]
+
+  @@index([groupId, startsAt])
+  @@index([hostUserId])
+  @@map("sessions")
+}
+
+model SessionParticipant {
+  id               String        @id @default(cuid())
+  sessionId        String        @map("session_id")
+  userId           String        @map("user_id")
+  rsvpStatus       RsvpStatus    @map("rsvp_status")
+  joinedAt         DateTime?     @map("joined_at")
+  waitlistPosition Int?          @map("waitlist_position")
+  paymentStatus    PaymentStatus @default(NOT_REQUIRED) @map("payment_status")
+  checkedInAt      DateTime?     @map("checked_in_at")
+  notes            String?
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  session          Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lineupSlot       LineupSlot?
+
+  @@unique([sessionId, userId])
+  @@index([sessionId, rsvpStatus])
+  @@index([sessionId, waitlistPosition])
+  @@map("session_participants")
+}
+
+model Court {
+  id          String       @id @default(cuid())
+  sessionId   String       @map("session_id")
+  label       String
+  sortOrder   Int          @map("sort_order")
+  session     Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  lineupSlots LineupSlot[]
+
+  @@unique([sessionId, sortOrder])
+  @@map("courts")
+}
+
+model LineupSlot {
+  id            String             @id @default(cuid())
+  sessionId     String             @map("session_id")
+  courtId       String             @map("court_id")
+  participantId String             @unique @map("participant_id")
+  slotOrder     Int                @map("slot_order")
+  session       Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  court         Court              @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  participant   SessionParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([courtId, slotOrder])
+  @@index([sessionId])
+  @@map("lineup_slots")
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  groupId   String?   @map("group_id")
+  sessionId String?   @map("session_id")
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  group     Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  session   Session?  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([sessionId])
+  @@map("invites")
+}
+
+model Notification {
+  id             String                     @id @default(cuid())
+  userId         String                     @map("user_id")
+  sessionId      String?                    @map("session_id")
+  type           NotificationType
+  deliveryStatus NotificationDeliveryStatus @default(PENDING) @map("delivery_status")
+  scheduledFor   DateTime?                  @map("scheduled_for")
+  sentAt         DateTime?                  @map("sent_at")
+  attempts       Int                        @default(0)
+  nextAttemptAt  DateTime?                  @map("next_attempt_at")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  user           User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session        Session?                   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, deliveryStatus])
+  @@index([sessionId])
+  @@map("notifications")
+}
+
+model MatchResult {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  label     String
+  scoreA    Int      @map("score_a")
+  scoreB    Int      @map("score_b")
+  createdAt DateTime @default(now()) @map("created_at")
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("match_results")
+}
+
+model Follow {
+  followerId String   @map("follower_id")
+  followeeId String   @map("followee_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  follower   User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee   User     @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followeeId])
+  @@index([followeeId])
+  @@map("follows")
+}
+
+model SavedSession {
+  userId    String   @map("user_id")
+  sessionId String   @map("session_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, sessionId])
+  @@index([sessionId])
+  @@map("saved_sessions")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  subjectId String   @map("subject_id")
+  authorId  String   @map("author_id")
+  sessionId String?  @map("session_id")
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  subject   User     @relation("ReviewSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+  author    User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@unique([subjectId, authorId, sessionId])
+  @@index([subjectId])
+  @@map("reviews")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  authorId  String   @map("author_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("chat_messages")
+}
+
+model AuthIdentity {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id")
+  provider    AuthProvider
+  providerSub String       @map("provider_sub")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSub])
+  @@index([userId])
+  @@map("auth_identities")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}

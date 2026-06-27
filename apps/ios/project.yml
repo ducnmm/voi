@@ -1,0 +1,52 @@
+name: Voi
+options:
+  bundleIdPrefix: com.voi
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: "8.0.0"
+targets:
+  Voi:
+    type: application
+    platform: iOS
+    sources:
+      - Voi
+    dependencies:
+      - package: GoogleSignIn
+        product: GoogleSignIn
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.voi.app
+        DEVELOPMENT_TEAM: 68L42T9FWT
+        CODE_SIGN_STYLE: Automatic
+        INFOPLIST_KEY_CFBundleDisplayName: Voi
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
+        SWIFT_VERSION: "6.0"
+    info:
+      path: Voi/Info.plist
+      properties:
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations:
+          - en
+          - vi
+        UILaunchScreen: {}
+        NSCalendarsUsageDescription: "Add badminton sessions to your calendar."
+        NSCalendarsFullAccessUsageDescription: "Add badminton sessions to your calendar."
+        GIDClientID: "291960099224-n1tslm0u0rfvjb35is8lgvb0rbrc014r.apps.googleusercontent.com"
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - "com.googleusercontent.apps.291960099224-n1tslm0u0rfvjb35is8lgvb0rbrc014r"
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            localhost:
+              NSExceptionAllowsInsecureHTTPLoads: true

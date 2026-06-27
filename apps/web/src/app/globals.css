@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+/*
+ * Semantic color tokens. Light values live in @theme (emitted to :root);
+ * dark values override the same custom properties under prefers-color-scheme.
+ * Every utility (bg-surface, text-fg, …) resolves via var(), so flipping the
+ * variables flips the whole UI automatically — no per-component dark: variants.
+ */
+@theme {
+  /* surfaces & text */
+  --color-bg: #efece0; /* page background */
+  --color-surface: #ffffff; /* card surface ("paper") */
+  --color-surface-2: #efece0; /* inner chips / secondary surface */
+  --color-surface-hover: #f3f1e8;
+  --color-fg: #1f3d2b; /* primary text */
+  --color-muted: #8b8f80; /* secondary text */
+  --color-leaf: #5f8f3f; /* price / accent green */
+  --color-line: #1f3d2b; /* borders/rings, used with /opacity */
+
+  /* tone blocks (bg + matching foreground) */
+  --color-sage: #7d9f64;
+  --color-sage-fg: #1f3d2b;
+  --color-sage-hover: #6f9156;
+  --color-forest: #1f3d2b;
+  --color-forest-fg: #eef0e6;
+  --color-forest-hover: #16301f;
+  --color-ink: #14160f;
+  --color-ink-fg: #eef0e6;
+  --color-mint: #dcebd3;
+  --color-mint-fg: #1f3d2b;
+  --color-sand: #e9e5d5;
+  --color-sand-fg: #1f3d2b;
+
+  /* image tints */
+  --color-tint-acid: #7d9f64;
+  --color-tint-sun: #dcebd3;
+  --color-tint-bubble: #e9e5d5;
+  --color-tint-sky: #c5d8b8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* surfaces & text */
+    --color-bg: #111410;
+    --color-surface: #1b201a;
+    --color-surface-2: #252b22;
+    --color-surface-hover: #2a3127;
+    --color-fg: #e8ece2;
+    --color-muted: #9aa091;
+    --color-leaf: #8fc266;
+    --color-line: #e8ece2;
+
+    /* tone blocks — keep the green character, drop the lightness */
+    --color-sage: #5f7d49;
+    --color-sage-fg: #0e1a10;
+    --color-sage-hover: #6d8c55;
+    --color-forest: #21402d;
+    --color-forest-fg: #eef0e6;
+    --color-forest-hover: #2a5038;
+    --color-ink: #0c0d09;
+    --color-ink-fg: #eef0e6;
+    --color-mint: #28331f;
+    --color-mint-fg: #dcebd3;
+    --color-sand: #2c2a20;
+    --color-sand-fg: #e9e5d5;
+
+    /* image tints — deeper so emoji art still reads on dark */
+    --color-tint-acid: #4f6a3b;
+    --color-tint-sun: #28331f;
+    --color-tint-bubble: #2c2a20;
+    --color-tint-sky: #3a4a30;
+  }
+}
+
+html,
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  -webkit-font-smoothing: antialiased;
+  font-family:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Hide scrollbars everywhere — content still scrolls. */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge/IE */
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome/Safari/WebKit */
+}
+
+/* Stop iOS Safari auto-zoom when focusing inputs on small screens */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

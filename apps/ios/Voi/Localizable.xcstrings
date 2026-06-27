@@ -1,0 +1,421 @@
+{
+  "sourceLanguage" : "en",
+  "version" : "1.0",
+  "strings" : {
+    "%lld courts" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%lld sân" } }
+      }
+    },
+    "%lld slots left" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Còn %lld chỗ" } }
+      }
+    },
+    "Full" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã đầy" } }
+      }
+    },
+    "Available" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Còn chỗ" } }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xoá lọc" } }
+      }
+    },
+    "Clear filters" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xoá bộ lọc" } }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xong" } }
+      }
+    },
+    "Filter" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bộ lọc" } }
+      }
+    },
+    "%lld events joined" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã tham gia %lld buổi" } }
+      }
+    },
+    "%lld sessions hosted" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã host %lld buổi" } }
+      }
+    },
+    "Host" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Người host" } }
+      }
+    },
+    "Can't go" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không đi" } }
+      }
+    },
+    "Join" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tham gia" } }
+      }
+    },
+    "Join waitlist" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Vào danh sách chờ" } }
+      }
+    },
+    "Joined" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã tham gia" } }
+      }
+    },
+    "Maybe" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Có thể" } }
+      }
+    },
+    "On waitlist" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Trong danh sách chờ" } }
+      }
+    },
+    "Your RSVP" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Phản hồi của bạn" } }
+      }
+    },
+    "Hosted" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã host" } }
+      }
+    },
+    "Hosts" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Người host" } }
+      }
+    },
+    "Joined" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã tham gia" } }
+      }
+    },
+    "New" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Mới" } }
+      }
+    },
+    "No reviews yet" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có đánh giá" } }
+      }
+    },
+    "People" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Mọi người" } }
+      }
+    },
+    "Player" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Người chơi" } }
+      }
+    },
+    "Players" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Người chơi" } }
+      }
+    },
+    "Pricing" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cách tính giá" } }
+      }
+    },
+    "Rating" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm" } }
+      }
+    },
+    "Reviews" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đánh giá" } }
+      }
+    },
+    "Set price" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tự đặt giá" } }
+      }
+    },
+    "Split costs" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chia chi phí" } }
+      }
+    },
+    "No events match your filters" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có sự kiện khớp bộ lọc" } }
+      }
+    },
+    "Only show available" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chỉ hiện còn chỗ" } }
+      }
+    },
+    "Skill level" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Trình độ" } }
+      }
+    },
+    "Try removing some filters to see more events." : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thử bỏ bớt bộ lọc để xem thêm sự kiện." } }
+      }
+    },
+    "Venue" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Địa điểm" } }
+      }
+    },
+    "Advanced" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Khá" } }
+      }
+    },
+    "Alerts" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thông báo" } }
+      }
+    },
+    "Appearance" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Giao diện" } }
+      }
+    },
+    "Upcoming" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Sắp tới" } } } },
+    "Availability" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tình trạng" } } } },
+    "Settings" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cài đặt" } } } },
+    "Notifications" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thông báo" } } } },
+    "Reminders" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Nhắc nhở" } } } },
+    "Payments" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thanh toán" } } } },
+    "RSVP updates" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cập nhật phản hồi" } } } },
+    "About" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Giới thiệu" } } } },
+    "Version" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Phiên bản" } } } },
+    "Sign out" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đăng xuất" } } } },
+    "Sort by" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Sắp xếp theo" } } } },
+    "Saved only" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chỉ đã lưu" } } } },
+    "Date" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Ngày" } } } },
+    "Price" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Giá" } } } },
+    "Open spots" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Còn chỗ" } } } },
+    "Attendance" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm danh" } } } },
+    "Checked in" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã đến" } } } },
+    "Not yet" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa" } } } },
+    "Match results" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Kết quả trận" } } } },
+    "No results yet." : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có kết quả." } } } },
+    "Add" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thêm" } } } },
+    "Add result" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thêm kết quả" } } } },
+    "Match" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Trận" } } } },
+    "Label" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tên" } } } },
+    "Score" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tỉ số" } } } },
+    "Follow" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Theo dõi" } } } },
+    "Following" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đang theo dõi" } } } },
+    "Message" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tin nhắn" } } } },
+    "Nearby" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gần đây" } } } },
+    "Past" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã qua" } } } },
+    "Search sessions" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tìm buổi tập" } } } },
+    "No results" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có kết quả" } } } },
+    "No sessions match your search." : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có buổi tập khớp tìm kiếm." } } } },
+    "Cancelled" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã hủy" } } } },
+    "Ended" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã kết thúc" } } } },
+    "Few spots left" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Sắp đầy" } } } },
+    "Starting soon" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Sắp diễn ra" } } } },
+    "Add to Calendar" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thêm vào Lịch" } } } },
+    "Cancel session" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hủy buổi" } } } },
+    "Edit" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Sửa" } } } },
+    "Edit session" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Sửa buổi" } } } },
+    "Save" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lưu" } } } },
+    "Directions" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chỉ đường" } } } },
+    "This session was cancelled." : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Buổi này đã bị hủy." } } } },
+    "Repeat weekly" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lặp lại hàng tuần" } } } },
+    "Write a review" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Viết đánh giá" } } } },
+    "Comment" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bình luận" } } } },
+    "Submit" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gửi" } } } },
+    "Share how it went…" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chia sẻ cảm nhận của bạn…" } } } },
+    "I've paid" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tôi đã trả" } } } },
+    "Payment" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thanh toán" } } } },
+    "Scan with your banking app (VietQR / Momo)." : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Quét bằng app ngân hàng (VietQR / Momo)." } } } },
+    "Get started" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bắt đầu" } } } },
+    "Next" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tiếp" } } } },
+    "Delete" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xoá" } } } },
+    "Unread" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa đọc" } } } },
+    "Read" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã đọc" } } } },
+    "Cancel" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Huỷ" } } } },
+    "Invite" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lời mời" } } } },
+    "Open invite" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Mở lời mời" } } } },
+    "Share invite" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chia sẻ lời mời" } } } },
+    "You're invited to" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bạn được mời tham gia" } } } },
+    "Find a game" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tìm trận đấu" } } } },
+    "Play together" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chơi cùng nhau" } } } },
+    "Build your rep" : { "localizations" : { "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xây dựng uy tín" } } } },
+    "Dark" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tối" } }
+      }
+    },
+    "Light" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Sáng" } }
+      }
+    },
+    "System" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hệ thống" } }
+      }
+    },
+    "Beginner" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Mới chơi" } }
+      }
+    },
+    "Connection" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Kết nối" } }
+      }
+    },
+    "Create event" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tạo sự kiện" } }
+      }
+    },
+    "Default skill" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Trình độ mặc định" } }
+      }
+    },
+    "Display name" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tên hiển thị" } }
+      }
+    },
+    "English" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tiếng Anh" } }
+      }
+    },
+    "Events" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Sự kiện" } }
+      }
+    },
+    "Finished sessions will show up here." : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Các buổi tập đã kết thúc sẽ hiện ở đây." } }
+      }
+    },
+    "History" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lịch sử" } }
+      }
+    },
+    "Intermediate" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Trung bình" } }
+      }
+    },
+    "Language" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Ngôn ngữ" } }
+      }
+    },
+    "Local demo" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bản demo cục bộ" } }
+      }
+    },
+    "Manage events" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Quản lý sự kiện" } }
+      }
+    },
+    "Mark all read" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đánh dấu đã đọc" } }
+      }
+    },
+    "No past sessions" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có buổi tập nào đã qua" } }
+      }
+    },
+    "No sessions yet. Tap plus to create one." : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có buổi tập nào. Nhấn dấu cộng để tạo." } }
+      }
+    },
+    "No upcoming sessions to manage. Create one to get started." : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có buổi tập sắp tới để quản lý. Tạo một buổi để bắt đầu." } }
+      }
+    },
+    "OK" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }
+      }
+    },
+    "Open" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Mọi trình độ" } }
+      }
+    },
+    "Profile" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hồ sơ" } }
+      }
+    },
+    "Profile saved" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã lưu hồ sơ" } }
+      }
+    },
+    "Save changes" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lưu thay đổi" } }
+      }
+    },
+    "Sessions" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Buổi tập" } }
+      }
+    },
+    "Signed in" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã đăng nhập" } }
+      }
+    },
+    "Tiếng Việt" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tiếng Việt" } }
+      }
+    },
+    "You" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bạn" } }
+      }
+    },
+    "You're all caught up." : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bạn đã xem hết thông báo." } }
+      }
+    },
+    "Your changes were saved locally." : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thay đổi đã được lưu cục bộ." } }
+      }
+    }
+  }
+}

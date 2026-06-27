@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: voi
+          POSTGRES_PASSWORD: voi
+          POSTGRES_DB: voi_dev
+        ports:
+          - 55487:5432
+        options: >-
+          --health-cmd "pg_isready -U voi -d voi_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://voi:voi@localhost:55487/voi_dev?schema=public
+      JWT_SECRET: ci-development-secret
+      API_HOST: 0.0.0.0
+      API_PORT: 43187
+      APP_BASE_URL: http://localhost:43188
+      DEFAULT_CURRENCY: VND
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.0.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm db:deploy
+      - run: pnpm verify
