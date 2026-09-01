@@ -1,6 +1,6 @@
 # Product Requirements
 
-Voi is a polished iOS-first coordination product for badminton groups. It should be built as a durable product, not a throwaway MVP. A responsive web companion uses the same API for invite links and fallback access.
+Voi is a polished iOS-first coordination product for badminton groups. It should be built as a durable product, not a throwaway MVP. The SwiftUI app is the only client in scope.
 
 ## Product Standard
 
@@ -10,9 +10,9 @@ The product should be production-minded from the start:
 - Versioned backend routes.
 - Database migrations.
 - Strong domain rules on the server.
-- Notification infrastructure designed before any delivery channel (web push, email, or APNs) is wired.
+- Notification infrastructure designed before APNs is wired.
 - Local development and CI workflows.
-- iOS architecture that can grow without rewriting the app, sharing contracts with the web companion and API.
+- iOS architecture that can grow without rewriting the app, sharing contracts with the API.
 
 ## Core Product Areas
 
@@ -57,10 +57,10 @@ The product should be production-minded from the start:
 
 ### Notifications
 
-- Notification records are created by the backend and surfaced in-app on iOS and the web companion.
+- Notification records are created by the backend and surfaced in the iOS app.
 - Users can manage reminder and status-change preferences.
 - iOS push device tokens are registered through the API from the primary client.
-- Delivery (APNs first, then web push or email if needed) is a separate worker concern.
+- Delivery (APNs) is a separate worker concern.
 
 ## Release Bar
 
@@ -70,4 +70,4 @@ Before a public beta:
 - All schema changes must be migrations.
 - Core business rules must have tests.
 - The iOS client must handle loading, empty, success, and error states.
-- Invite, RSVP, waitlist, cancellation, and notification flows must be verified on iOS; invite fallback must be verified on the web.
+- Invite, RSVP, waitlist, cancellation, and notification flows must be verified on iOS.

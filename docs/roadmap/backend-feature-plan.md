@@ -151,11 +151,11 @@ from so trade-offs stay explicit.
 
 ```
                        ┌──────────────┐
-   iOS (SwiftUI) ─────▶│              │
-   Web (Next.js) ─────▶│   Fastify    │──▶ PostgreSQL (source of truth)
-                       │   /v1 REST   │
-   Chat (WebSocket) ──▶│   + /ws      │──▶ (later) Redis: WS pub/sub + cache
+   iOS (SwiftUI) ─────▶│   Fastify    │──▶ PostgreSQL (source of truth)
+   Chat (WebSocket) ──▶│   /v1 REST   │
+                       │   + /ws      │──▶ Redis: HTTP/WS rate limits
                        └──────┬───────┘
+                              │ (later: Redis pub/sub for multi-instance chat)
                               │ enqueue
                               ▼
                      Notification worker ──▶ APNs / email

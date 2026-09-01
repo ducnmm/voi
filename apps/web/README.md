@@ -1,9 +1,10 @@
 # Voi Web
 
-The companion web client for Voi, built with Next.js (App Router) and React. It
-supports invite links and fallback access for users without the primary iOS app,
-talks to the TypeScript API in `apps/api`, and shares contracts from
-`packages/shared`.
+**Not in the current product path.** Voi is iOS-first (`apps/ios`). This Next.js
+tree is leftover from an earlier experiment and is not the client to build or
+ship.
+
+It still talks to `apps/api` and `packages/shared` if you run it locally.
 
 ## Local Development
 

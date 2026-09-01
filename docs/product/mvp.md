@@ -8,8 +8,7 @@ A host can create a badminton session, share it with a group, collect responses,
 
 ## In Scope
 
-- Native iOS-first experience (SwiftUI).
-- Responsive web companion for invite links and users without the app.
+- Native iOS app (SwiftUI) as the only client.
 - Badminton as the only supported sport.
 - Manual venue entry.
 - Groups.
@@ -31,13 +30,16 @@ A host can create a badminton session, share it with a group, collect responses,
 - Ranking and competitive ladders.
 - Tournament brackets.
 - Android app.
+- Public web app as a product surface.
+- Venue-owner tools or marketplace.
+- In-app purchases or selling.
 
 ## Core MVP Flow
 
-1. A host creates a group.
-2. The host creates a badminton session.
-3. The host shares an invite link.
-4. Players open the session and choose Join, Maybe, or Can't Go.
+1. A host creates a group (roster of regulars).
+2. The host creates a badminton session (one play).
+3. The host shares an invite link (`voi://invites/{token}`).
+4. Non-host players Join (Maybe / Can't are host tools).
 5. Confirmed players fill available slots.
 6. Extra players go to the waitlist.
 7. The host reviews the lineup board.

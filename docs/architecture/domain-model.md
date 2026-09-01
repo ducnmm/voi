@@ -106,7 +106,7 @@ A mobile device registered for push notification delivery, used by the later iOS
 
 MVP assumption:
 
-- Device tokens are stored before any push delivery is implemented; the web client surfaces notifications in-app.
+- Device tokens are stored before APNs delivery is implemented; the iOS app surfaces notifications in-app.
 - A device can be disabled when the user signs out or revokes notifications.
 
 ## Notification Preference

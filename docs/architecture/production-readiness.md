@@ -29,18 +29,10 @@ This checklist defines what "professional" means for Voi.
 - Screens should be designed for real use, not placeholder mock-data surfaces.
 - Push notifications and Keychain-backed durable authentication are required before public release.
 
-## Web Companion
-
-- Next.js (App Router) app using the same versioned backend.
-- Invite links must work in a browser without requiring an app install.
-- Core fallback flows should be responsive and usable on a phone browser.
-- API client uses the same versioned backend.
-- State management should separate view models, services, and models.
-
 ## Security
 
-- Development login is temporary.
-- Durable web auth (magic link or OAuth) is required before public release; Sign in with Apple ships with the iOS app.
+- Development login is local/CI only.
+- Sign in with Apple is required before App Store release.
 - API secrets must be environment-only.
 - Device tokens must not be logged.
 - Host-only operations must be enforced on the server.
@@ -50,4 +42,4 @@ This checklist defines what "professional" means for Voi.
 - App logs should include request IDs.
 - CI must run on pull requests.
 - Production and staging must use separate databases and secrets.
-- Notification delivery (web push, email, or APNs) should run through a background worker with retry behavior.
+- Notification delivery (APNs) should run through a background worker with retry behavior.

@@ -4,9 +4,8 @@ Voi should start with a pragmatic architecture that supports fast product iterat
 
 ## Starting Stack
 
-- Native iOS app (SwiftUI): the primary client.
-- Web app: Next.js (React, App Router) — companion client and invite-link fallback.
-- Authentication: development login first, durable auth next, with Sign in with Apple as the primary iOS sign-in path.
+- Native iOS app (SwiftUI): the only client in scope.
+- Authentication: development login and Google Sign-In; Sign in with Apple before App Store release.
 - Backend: custom TypeScript API.
 - API framework: Fastify.
 - Database: PostgreSQL.

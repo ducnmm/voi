@@ -1,10 +1,10 @@
-# ADR 0003: Start Web First
+# ADR 0003: Start Web First (superseded)
 
 ## Status
 
-Superseded by the product decision to return to iOS-first (2026-08-04).
+**Superseded. Do not follow.** Current decision: [ADR 0001: Start iOS First](0001-ios-first.md).
 
-This decision is retained below for historical context only. The current decision is [ADR 0001: Start iOS First](0001-ios-first.md).
+Kept only as history. Voi is iOS-first; `apps/web` is not the product path.
 
 ## Context
 

@@ -1,34 +1,32 @@
 # Voi
 
-Voi is a spec-driven, iOS-first product for organizing casual badminton sessions with small groups. A responsive web app supports invite links and users who do not have the native app.
+Voi is an **iOS-first** app for organizing casual badminton sessions with small groups.
 
-The working product direction is:
+The product direction is:
 
 > A minimal, beautifully designed scheduling app for badminton groups: create a session, invite players, confirm attendance, handle waitlists, organize courts, and split costs.
 
-## Current Phase
-
-This repository is in the foundation phase. Product specs are the source of truth, and implementation prioritizes the MVP backend and native iOS app. The web app is a companion client for invite links and fallback access.
+The primary client is the SwiftUI iOS app. The Fastify API is the source of truth. A Next.js tree still lives under `apps/web` but is **not** the product path.
 
 ## Project Layout
 
-- `apps/api`: custom TypeScript backend.
-- `apps/web`: Next.js web app (companion and invite-link fallback client).
 - `apps/ios`: SwiftUI iOS app (primary client).
-- `packages/shared`: shared TypeScript contracts and constants.
-- `docs`: product, process, architecture, and feature specs.
+- `apps/api`: TypeScript API (Fastify + Prisma + Postgres).
+- `packages/shared`: shared TypeScript contracts.
+- `docs`: product, architecture, and feature specs.
+- `apps/web`: leftover Next.js app — not in current scope.
 
 ## Local Development
 
 ```sh
 pnpm install
-docker compose up -d postgres
+docker compose up -d postgres redis
 pnpm db:migrate
-pnpm dev          # API
-pnpm dev:web      # Web app (in a second terminal)
+pnpm db:seed
+pnpm dev          # API on http://localhost:43187
 ```
 
-The API runs on `http://localhost:43187`, with versioned app routes under `http://localhost:43187/v1`. The web app runs on `http://localhost:43188`. Local PostgreSQL is exposed on port `55487` to avoid colliding with common system database ports.
+Versioned routes live under `/v1`. Postgres is on host port `55487`, Redis on `55479`. Point the iOS simulator at `http://localhost:43187/v1` (or `VOI_API_BASE_URL`).
 
 Useful checks:
 
@@ -36,6 +34,7 @@ Useful checks:
 pnpm build
 pnpm typecheck
 pnpm test
+pnpm test:e2e:ios
 pnpm verify
 ```
 
@@ -65,9 +64,11 @@ pnpm verify
 
 ## Product Constraints
 
-- Start with native iOS (web companion and invite-link fallback alongside it).
+- Native iOS is the only client in scope.
 - Start with badminton.
+- Group is a roster; a session is one play.
 - Start with group scheduling, not venue booking.
+- No in-app purchases or selling.
 - Use a custom TypeScript backend.
 - Use VND as the default currency.
 - Keep the core flow fast enough that a host can create a session in under 30 seconds.

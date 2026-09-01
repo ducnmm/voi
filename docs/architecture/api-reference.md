@@ -172,7 +172,7 @@ Accepts a group or session invite and adds the authenticated user to the group.
 
 Returns the authenticated user's notification records.
 
-Current MVP notification records are database records only, surfaced in-app on the web. Delivery (web push, email, or APNs) will be added later.
+Notification records are persisted and surfaced in the iOS app. APNs delivery is added through a background worker.
 
 ### GET /notification-preferences
 
