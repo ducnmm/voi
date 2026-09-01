@@ -47,6 +47,7 @@ elif [[ "${SKIP_API_START:-}" == "1" ]]; then
 else
   echo "==> Starting API"
   if [[ ! -f apps/api/dist/server.js ]]; then
+    pnpm --filter @voi/shared build
     pnpm --filter @voi/api build
   fi
   pnpm --filter @voi/api start >/tmp/voi-api-e2e.log 2>&1 &

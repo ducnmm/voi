@@ -92,6 +92,8 @@ jobs:
           createdb -O voi voi_dev || true
       - run: brew install xcodegen
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm --filter @voi/shared build
       - run: pnpm --filter @voi/api build
       - name: XCUITests
         run: bash apps/ios/scripts/run-e2e.sh
