@@ -2,8 +2,12 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
 import { badRequest, notFound } from "../utils/api-error.js";
-import { presentSession, sessionInclude } from "../services/session-presenter.js";
-import { presentUserSummary } from "../services/user-presenter.js";
+import { assertCanAccessSession } from "../services/session-access.js";
+import {
+  presentSessionCard,
+  sessionFeedInclude
+} from "../services/session-presenter.js";
+import { presentUserSummary, userSummarySelect } from "../services/user-presenter.js";
 
 export async function socialRoutes(app: FastifyInstance): Promise<void> {
   // Follow a host/player. Idempotent (PUT).
@@ -53,7 +57,9 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
     const userId = getAuthenticatedUserId(request);
     const rows = await prisma.follow.findMany({
       where: { followerId: userId },
-      include: { followee: true },
+      include: {
+        followee: { select: userSummarySelect }
+      },
       orderBy: { createdAt: "desc" }
     });
     return { users: rows.map((row) => presentUserSummary(row.followee)) };
@@ -69,11 +75,12 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
 
       const session = await prisma.session.findUnique({
         where: { id: sessionId },
-        select: { id: true }
+        select: { id: true, groupId: true, visibility: true }
       });
       if (!session) {
         throw notFound("Session not found");
       }
+      await assertCanAccessSession(session, userId);
 
       await prisma.savedSession.upsert({
         where: { userId_sessionId: { userId, sessionId } },
@@ -102,9 +109,9 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
     const userId = getAuthenticatedUserId(request);
     const rows = await prisma.savedSession.findMany({
       where: { userId },
-      include: { session: { include: sessionInclude } },
+      include: { session: { include: sessionFeedInclude } },
       orderBy: { createdAt: "desc" }
     });
-    return { sessions: rows.map((row) => presentSession(row.session)) };
+    return { sessions: rows.map((row) => presentSessionCard(row.session)) };
   });
 }

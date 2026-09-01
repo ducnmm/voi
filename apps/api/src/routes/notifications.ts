@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { UpdateNotificationPreferenceSchema } from "@voi/shared";
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
+import { notFound } from "../utils/api-error.js";
 
 export async function notificationRoutes(app: FastifyInstance): Promise<void> {
   app.get(
@@ -68,6 +69,7 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
         deliveryStatus: notification.deliveryStatus,
         scheduledFor: notification.scheduledFor?.toISOString() ?? null,
         sentAt: notification.sentAt?.toISOString() ?? null,
+        readAt: notification.readAt?.toISOString() ?? null,
         createdAt: notification.createdAt.toISOString(),
         session: notification.session
           ? {
@@ -80,6 +82,41 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
       }))
     };
   });
+
+  app.post(
+    "/notifications/:notificationId/read",
+    { preHandler: app.authenticate },
+    async (request) => {
+      const userId = getAuthenticatedUserId(request);
+      const params = request.params as { notificationId: string };
+      const updated = await prisma.notification.updateMany({
+        where: { id: params.notificationId, userId, readAt: null },
+        data: { readAt: new Date() }
+      });
+      if (updated.count === 0) {
+        const existing = await prisma.notification.findFirst({
+          where: { id: params.notificationId, userId }
+        });
+        if (!existing) {
+          throw notFound("Notification not found");
+        }
+      }
+      return { ok: true };
+    }
+  );
+
+  app.post(
+    "/notifications/read-all",
+    { preHandler: app.authenticate },
+    async (request) => {
+      const userId = getAuthenticatedUserId(request);
+      await prisma.notification.updateMany({
+        where: { userId, readAt: null },
+        data: { readAt: new Date() }
+      });
+      return { ok: true };
+    }
+  );
 }
 
 function presentPreference(preference: {

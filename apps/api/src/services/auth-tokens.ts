@@ -32,23 +32,39 @@ export async function rotateRefreshToken(
   app: FastifyInstance,
   raw: string
 ): Promise<{ accessToken: string; refreshToken: string } | null> {
-  const record = await prisma.refreshToken.findUnique({
-    where: { tokenHash: hashToken(raw) }
+  const tokenHash = hashToken(raw);
+
+  return prisma.$transaction(async (tx) => {
+    const claimed = await tx.refreshToken.updateMany({
+      where: {
+        tokenHash,
+        revokedAt: null,
+        expiresAt: { gt: new Date() }
+      },
+      data: { revokedAt: new Date() }
+    });
+
+    if (claimed.count !== 1) {
+      return null;
+    }
+
+    const record = await tx.refreshToken.findUniqueOrThrow({
+      where: { tokenHash }
+    });
+    const nextRaw = randomBytes(32).toString("base64url");
+    await tx.refreshToken.create({
+      data: {
+        userId: record.userId,
+        tokenHash: hashToken(nextRaw),
+        expiresAt: new Date(Date.now() + REFRESH_TTL_MS)
+      }
+    });
+
+    return {
+      accessToken: issueAccessToken(app, record.userId),
+      refreshToken: nextRaw
+    };
   });
-
-  if (!record || record.revokedAt || record.expiresAt.getTime() < Date.now()) {
-    return null;
-  }
-
-  await prisma.refreshToken.update({
-    where: { id: record.id },
-    data: { revokedAt: new Date() }
-  });
-
-  return {
-    accessToken: issueAccessToken(app, record.userId),
-    refreshToken: await issueRefreshToken(record.userId)
-  };
 }
 
 export async function revokeRefreshToken(raw: string): Promise<void> {

@@ -19,20 +19,18 @@ Exit criteria:
 
 ## Milestone 1: App Skeleton
 
-Goal: create the web foundation.
+Goal: create the iOS foundation and a lightweight web companion.
 
-- Next.js (App Router) project.
-- Navigation structure.
-- Design tokens.
-- Mock data.
-- Home screen.
-- Group detail screen.
-- Session detail screen.
+- SwiftUI project and navigation structure.
+- iOS design tokens and mock data.
+- iOS home, group detail, and session detail screens.
+- Next.js companion shell for invite links.
 
 Exit criteria:
 
-- The app can show realistic sample sessions without a backend.
-- Core screens feel directionally correct.
+- The iOS app can show realistic sample sessions without a backend.
+- Core iOS screens feel directionally correct.
+- A shared invite link opens a usable web fallback.
 
 ## Milestone 2: Session Creation and Groups
 
@@ -94,9 +92,9 @@ Goal: test with real badminton groups.
 - Error handling.
 - Basic analytics.
 - Manual feedback loop.
-- Hosted web deployment with a shareable URL.
+- Hosted web companion with shareable invite URLs.
+- TestFlight distribution for the iOS app.
 
 Exit criteria:
 
 - At least three real groups use the app for recurring sessions.
-

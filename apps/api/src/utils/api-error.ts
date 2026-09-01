@@ -29,13 +29,21 @@ export function notFound(message = "Resource not found"): ApiError {
   return new ApiError(404, "NOT_FOUND", message);
 }
 
+export function notImplemented(message = "Not implemented"): ApiError {
+  return new ApiError(501, "NOT_IMPLEMENTED", message);
+}
+
 export function conflict(message: string, details?: unknown): ApiError {
   return new ApiError(409, "CONFLICT", message, details);
 }
 
+export function tooManyRequests(message = "Too many requests"): ApiError {
+  return new ApiError(429, "RATE_LIMITED", message);
+}
+
 export function handleApiError(
   error: FastifyError | ApiError | ZodError,
-  _request: FastifyRequest,
+  request: FastifyRequest,
   reply: FastifyReply
 ): void {
   if (error instanceof ZodError) {
@@ -61,6 +69,9 @@ export function handleApiError(
   }
 
   const statusCode = error.statusCode ?? 500;
+  if (statusCode >= 500) {
+    request.log.error({ err: error }, error.message);
+  }
   reply.code(statusCode).send({
     error: {
       code: statusCode >= 500 ? "INTERNAL_SERVER_ERROR" : "REQUEST_ERROR",

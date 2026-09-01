@@ -30,6 +30,8 @@ struct PeopleListView: View {
                         PersonRow(person: person)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(A11y.People.row(person.name))
+                    .accessibilityLabel(person.name)
                 }
             }
             .padding(VoiSpacing.lg)
@@ -45,6 +47,7 @@ struct PeopleListView: View {
                     Image(systemName: backSymbol)
                 }
                 .accessibilityLabel("Close")
+                .accessibilityIdentifier(A11y.People.close)
             }
         }
     }
@@ -131,17 +134,17 @@ private struct PersonRow: View {
 
             Spacer()
 
-            RatingBadge(rating: person.averageRating, reviewCount: person.reviews.count)
+            RatingBadge(rating: person.averageRating, reviewCount: person.reviewCount)
         }
         .padding(VoiSpacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(VoiColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous)
                 .stroke(VoiColor.line, lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous))
     }
 
     private var activityText: String {
@@ -188,9 +191,10 @@ struct PersonDetailView: View {
     }
 
     private func loadReviews() async {
+        guard let token = environment.authSession.token else { return }
         do {
             reviewsList = try await environment.apiClient
-                .fetchUserReviews(userId: current.player.id)
+                .fetchUserReviews(token: token, userId: current.player.id)
                 .reviews
                 .map(Review.init(dto:))
         } catch {
@@ -211,7 +215,7 @@ struct PersonDetailView: View {
                         .foregroundStyle(VoiColor.muted)
                 }
                 Spacer()
-                if current.player.id != Mock.you.id {
+                if current.player.id != environment.authSession.currentPlayer.id {
                     Button { Task { await toggleFollow() } } label: {
                         Text(store.isFollowing(current.player.id) ? "Following" : "Follow")
                             .font(.subheadline.weight(.semibold))
@@ -221,6 +225,7 @@ struct PersonDetailView: View {
                             .foregroundStyle(store.isFollowing(current.player.id) ? Color.white : VoiColor.court)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(A11y.People.follow)
                 }
             }
 

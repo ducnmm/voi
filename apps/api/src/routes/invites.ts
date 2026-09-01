@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
 import { notFound } from "../utils/api-error.js";
+import { assertInviteActive } from "../services/invites.js";
 import { presentSession, sessionInclude } from "../services/session-presenter.js";
 
 export async function inviteRoutes(app: FastifyInstance): Promise<void> {
@@ -28,9 +29,7 @@ export async function inviteRoutes(app: FastifyInstance): Promise<void> {
         throw notFound("Invite not found");
       }
 
-      if (invite.expiresAt && invite.expiresAt < new Date()) {
-        throw notFound("Invite expired");
-      }
+      assertInviteActive(invite);
 
       const groupId = invite.groupId ?? invite.session?.groupId;
       if (!groupId) {

@@ -4,14 +4,14 @@ Voi should start with a pragmatic architecture that supports fast product iterat
 
 ## Starting Stack
 
-- Web app: Next.js (React, App Router) — the primary client.
-- Native iOS app (SwiftUI): a later channel against the same API.
-- Authentication: development email login first, durable web auth (magic link or OAuth) next, Sign in with Apple with the iOS app.
+- Native iOS app (SwiftUI): the primary client.
+- Web app: Next.js (React, App Router) — companion client and invite-link fallback.
+- Authentication: development login first, durable auth next, with Sign in with Apple as the primary iOS sign-in path.
 - Backend: custom TypeScript API.
 - API framework: Fastify.
 - Database: PostgreSQL.
 - ORM: Prisma.
-- Notifications: persisted records surfaced in-app; background delivery (web push, email, or APNs) later.
+- Notifications: persisted records surfaced in-app; background APNs delivery later.
 - Analytics: lightweight product events once the core flow exists.
 - API routes: versioned under `/v1`.
 - API documentation: OpenAPI document served at `/openapi.json`.

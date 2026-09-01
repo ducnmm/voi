@@ -1,12 +1,16 @@
 import type { FastifyInstance } from "fastify";
-import type { Prisma, User } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { CreateReviewSchema } from "@voi/shared";
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
 import { badRequest, forbidden, notFound } from "../utils/api-error.js";
-import { presentUserSummary } from "../services/user-presenter.js";
+import { presentUserSummary, userSummarySelect } from "../services/user-presenter.js";
 
-type ReviewWithAuthor = Prisma.ReviewGetPayload<{ include: { author: true } }>;
+const reviewAuthorInclude = { author: { select: userSummarySelect } } as const;
+
+type ReviewWithAuthor = Prisma.ReviewGetPayload<{
+  include: typeof reviewAuthorInclude;
+}>;
 
 function presentReview(review: ReviewWithAuthor) {
   return {
@@ -33,10 +37,15 @@ export async function peopleRoutes(app: FastifyInstance): Promise<void> {
 
     const members = await prisma.groupMember.findMany({
       where: { groupId: { in: groupIds }, userId: { not: me } },
-      include: { user: true }
+      include: {
+        user: { select: userSummarySelect }
+      }
     });
 
-    const byUser = new Map<string, { user: User; isHost: boolean }>();
+    const byUser = new Map<
+      string,
+      { user: (typeof members)[number]["user"]; isHost: boolean }
+    >();
     for (const member of members) {
       const current = byUser.get(member.userId) ?? { user: member.user, isHost: false };
       if (member.role === "HOST") {
@@ -95,7 +104,10 @@ export async function peopleRoutes(app: FastifyInstance): Promise<void> {
     { preHandler: app.authenticate },
     async (request) => {
       const { userId } = request.params as { userId: string };
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: userSummarySelect
+      });
       if (!user) {
         throw notFound("User not found");
       }
@@ -130,16 +142,20 @@ export async function peopleRoutes(app: FastifyInstance): Promise<void> {
   );
 
   // Reviews a user has received.
-  app.get("/users/:userId/reviews", async (request) => {
-    const { userId } = request.params as { userId: string };
-    const rows = await prisma.review.findMany({
-      where: { subjectId: userId },
-      include: { author: true },
-      orderBy: { createdAt: "desc" },
-      take: 50
-    });
-    return { reviews: rows.map(presentReview) };
-  });
+  app.get(
+    "/users/:userId/reviews",
+    { preHandler: app.authenticate },
+    async (request) => {
+      const { userId } = request.params as { userId: string };
+      const rows = await prisma.review.findMany({
+        where: { subjectId: userId },
+        include: reviewAuthorInclude,
+        orderBy: { createdAt: "desc" },
+        take: 50
+      });
+      return { reviews: rows.map(presentReview) };
+    }
+  );
 
   // Review a co-participant of a session. Gated on attendance (check-in).
   app.post(
@@ -186,7 +202,7 @@ export async function peopleRoutes(app: FastifyInstance): Promise<void> {
           rating: body.rating,
           comment: body.comment
         },
-        include: { author: true }
+        include: reviewAuthorInclude
       });
 
       return reply.code(201).send({ review: presentReview(review) });

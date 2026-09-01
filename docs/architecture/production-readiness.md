@@ -21,17 +21,19 @@ This checklist defines what "professional" means for Voi.
 - Session cancellation preserves historical records.
 - Notification records are persisted before delivery workers are added.
 
-## Web
+## iOS
 
-- Next.js (App Router) app, the primary client.
-- API client uses the versioned backend and types shared from `packages/shared`.
-- Code should separate the API client, shared response types, and view components.
-- Screens should be designed for real use, not placeholder landing pages.
-- Layout should be responsive and usable on a phone browser.
+- Native SwiftUI app, the primary client.
+- API client uses the versioned backend and models aligned with `packages/shared`.
+- Code should separate services, view models, domain models, and views.
+- Screens should be designed for real use, not placeholder mock-data surfaces.
+- Push notifications and Keychain-backed durable authentication are required before public release.
 
-## iOS (later channel)
+## Web Companion
 
-- Native SwiftUI app, deprioritized behind web.
+- Next.js (App Router) app using the same versioned backend.
+- Invite links must work in a browser without requiring an app install.
+- Core fallback flows should be responsive and usable on a phone browser.
 - API client uses the same versioned backend.
 - State management should separate view models, services, and models.
 
@@ -49,4 +51,3 @@ This checklist defines what "professional" means for Voi.
 - CI must run on pull requests.
 - Production and staging must use separate databases and secrets.
 - Notification delivery (web push, email, or APNs) should run through a background worker with retry behavior.
-

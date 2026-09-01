@@ -43,4 +43,58 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm db:deploy
+      - name: Create and migrate test database
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=voi psql -h localhost -p 55487 -U voi -d voi_dev \
+            -c "SELECT 1 FROM pg_database WHERE datname = 'voi_test'" | grep -q 1 \
+            || PGPASSWORD=voi createdb -h localhost -p 55487 -U voi voi_test
+          DATABASE_URL="postgresql://voi:voi@localhost:55487/voi_test?schema=public" pnpm db:deploy
       - run: pnpm verify
+
+  ios-e2e:
+    name: iOS E2E
+    runs-on: macos-15
+    timeout-minutes: 50
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    env:
+      DATABASE_URL: postgresql://voi:voi@127.0.0.1:5432/voi_dev?schema=public
+      JWT_SECRET: ci-development-secret
+      API_HOST: 0.0.0.0
+      API_PORT: 43187
+      APP_BASE_URL: http://127.0.0.1:43187
+      DEFAULT_CURRENCY: VND
+      RATE_LIMIT_MAX: "2000"
+      VOI_API_BASE_URL: http://127.0.0.1:43187/v1
+      SKIP_DOCKER: "1"
+      E2E_SUITE: ${{ github.ref == 'refs/heads/main' && 'full' || 'smoke' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.0.0
+          cache: pnpm
+      - name: PostgreSQL
+        run: |
+          brew install postgresql@16
+          export PATH="$(brew --prefix postgresql@16)/bin:$PATH"
+          echo "$(brew --prefix postgresql@16)/bin" >> "$GITHUB_PATH"
+          brew services start postgresql@16
+          for i in $(seq 1 30); do pg_isready -h 127.0.0.1 && break; sleep 1; done
+          createuser -s voi || true
+          createdb -O voi voi_dev || true
+      - run: brew install xcodegen
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @voi/api build
+      - name: XCUITests
+        run: bash apps/ios/scripts/run-e2e.sh
+      - name: API log on failure
+        if: failure()
+        run: tail -n 120 /tmp/voi-api-e2e.log || true

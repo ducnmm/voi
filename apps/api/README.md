@@ -13,11 +13,14 @@ Custom TypeScript backend for Voi.
 ## Local Development
 
 1. Copy `.env.example` to `.env`.
-2. Start PostgreSQL from the repository root:
+2. Start PostgreSQL and Redis from the repository root:
 
 ```sh
-docker compose up -d postgres
+docker compose up -d postgres redis
 ```
+
+HTTP and chat rate limits use Redis when `REDIS_URL` is set, and fall back to
+in-process memory otherwise (Vitest always uses memory).
 
 3. Install dependencies:
 

@@ -8,7 +8,8 @@ import {
 } from "@voi/shared";
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
-import { notFound, unauthorized } from "../utils/api-error.js";
+import { env } from "../config/env.js";
+import { conflict, notFound, notImplemented, unauthorized } from "../utils/api-error.js";
 import {
   verifyGoogleIdToken,
   type GoogleIdentity
@@ -32,8 +33,16 @@ function presentUser(user: User) {
 }
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  // Development login (kept for local/testing only).
-  app.post("/auth/dev", async (request, reply) => {
+  // Development login (local/CI only). Issues the same token pair as Google.
+  const authRateLimit =
+    env.NODE_ENV === "production"
+      ? { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }
+      : {};
+
+  app.post("/auth/dev", authRateLimit, async (request, reply) => {
+    if (env.NODE_ENV === "production") {
+      throw notFound("Not found");
+    }
     const body = DevLoginSchema.parse(request.body);
     const displayName =
       body.displayName ?? body.email.slice(0, body.email.indexOf("@"));
@@ -44,12 +53,22 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       create: { email: body.email, displayName }
     });
 
-    const token = app.jwt.sign({ sub: user.id });
-    return reply.code(201).send({ token, user: presentUser(user) });
+    const accessToken = issueAccessToken(app, user.id);
+    const refreshToken = await issueRefreshToken(user.id);
+    return reply.code(201).send({
+      token: accessToken,
+      accessToken,
+      refreshToken,
+      user: presentUser(user)
+    });
+  });
+
+  app.post("/auth/apple", async () => {
+    throw notImplemented("Sign in with Apple is not configured yet");
   });
 
   // Sign in with Google: verify the iOS-issued ID token, mint our token pair.
-  app.post("/auth/google", async (request, reply) => {
+  app.post("/auth/google", authRateLimit, async (request, reply) => {
     const body = GoogleLoginSchema.parse(request.body);
 
     let identity: GoogleIdentity;
@@ -78,7 +97,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // Exchange (and rotate) a refresh token for a fresh access token.
-  app.post("/auth/refresh", async (request) => {
+  app.post("/auth/refresh", authRateLimit, async (request) => {
     const body = RefreshTokenSchema.parse(request.body);
     const result = await rotateRefreshToken(app, body.refreshToken);
     if (!result) {
@@ -108,5 +127,38 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const body = UpdateProfileSchema.parse(request.body);
     const user = await prisma.user.update({ where: { id: userId }, data: body });
     return { user: presentUser(user) };
+  });
+
+  app.delete("/me", { preHandler: app.authenticate }, async (request) => {
+    const userId = getAuthenticatedUserId(request);
+
+    const [otherGroupMembers, otherSessionParticipants] = await Promise.all([
+      prisma.groupMember.count({
+        where: {
+          userId: { not: userId },
+          group: { createdByUserId: userId }
+        }
+      }),
+      prisma.sessionParticipant.count({
+        where: {
+          userId: { not: userId },
+          session: { hostUserId: userId }
+        }
+      })
+    ]);
+
+    if (otherGroupMembers > 0 || otherSessionParticipants > 0) {
+      throw conflict(
+        "Cancel hosted sessions and remove other members from your groups before deleting your account.",
+        { otherGroupMembers, otherSessionParticipants }
+      );
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.session.deleteMany({ where: { hostUserId: userId } });
+      await tx.group.deleteMany({ where: { createdByUserId: userId } });
+      await tx.user.delete({ where: { id: userId } });
+    });
+    return { ok: true };
   });
 }

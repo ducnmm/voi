@@ -56,10 +56,11 @@ struct OnboardingView: View {
                     .padding(.vertical, VoiSpacing.md)
                     .background(VoiColor.court)
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous))
             }
             .buttonStyle(.plain)
             .padding(VoiSpacing.lg)
+            .accessibilityIdentifier(page < slides.count - 1 ? A11y.Onboarding.next : A11y.Onboarding.getStarted)
         }
         .background(VoiColor.background)
     }

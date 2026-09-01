@@ -14,6 +14,7 @@ struct PaymentQRView: View {
                 Text(CurrencyFormatter.vnd(amount))
                     .font(.largeTitle.bold())
                     .foregroundStyle(VoiColor.ink)
+                    .accessibilityIdentifier(A11y.Payment.amount)
                 Text(sessionTitle)
                     .font(.subheadline)
                     .foregroundStyle(VoiColor.muted)
@@ -25,14 +26,14 @@ struct PaymentQRView: View {
                     .frame(width: 220, height: 220)
                     .padding(VoiSpacing.lg)
                     .background(VoiColor.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: VoiRadius.prominent, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: VoiRadius.prominent, style: .continuous)
                             .stroke(VoiColor.line, lineWidth: 1)
                     )
                     .padding(.top, VoiSpacing.lg)
 
-                Text("Scan with your banking app (VietQR / Momo).")
+                Text("Show this QR to the host so they can confirm your payment.")
                     .font(.caption)
                     .foregroundStyle(VoiColor.muted)
 
@@ -48,9 +49,10 @@ struct PaymentQRView: View {
                         .padding(.vertical, VoiSpacing.md)
                         .background(VoiColor.court)
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: VoiRadius.control, style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(A11y.Payment.paid)
             }
             .padding(VoiSpacing.lg)
             .frame(maxWidth: .infinity)
@@ -60,6 +62,7 @@ struct PaymentQRView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityIdentifier(A11y.Payment.cancel)
                 }
             }
         }

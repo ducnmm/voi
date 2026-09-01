@@ -1,5 +1,25 @@
 import Foundation
 
+/// Per-session room or the ongoing group room. Same message DTO either way.
+enum ChatRoom: Hashable, Identifiable {
+    case session(id: String, title: String)
+    case group(id: String, title: String)
+
+    var id: String {
+        switch self {
+        case .session(let id, _): return "session:\(id)"
+        case .group(let id, _): return "group:\(id)"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .session(_, let title), .group(_, let title):
+            return title
+        }
+    }
+}
+
 /// Loads chat history over REST and streams new messages over a WebSocket.
 @MainActor
 final class ChatViewModel: ObservableObject {
@@ -7,16 +27,16 @@ final class ChatViewModel: ObservableObject {
 
     private var api: APIClient?
     private var authSession: AuthSession?
-    private var sessionId = ""
+    private var room: ChatRoom?
     private var socket: URLSessionWebSocketTask?
     private var started = false
 
     var myId: String { authSession?.currentPlayer.id ?? "" }
 
-    func configure(api: APIClient, authSession: AuthSession, sessionId: String) {
+    func configure(api: APIClient, authSession: AuthSession, room: ChatRoom) {
         self.api = api
         self.authSession = authSession
-        self.sessionId = sessionId
+        self.room = room
     }
 
     func start() async {
@@ -32,21 +52,35 @@ final class ChatViewModel: ObservableObject {
         started = false
     }
 
-    func send(_ text: String) async {
+    @discardableResult
+    func send(_ text: String) async -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let api, let token = authSession?.token else { return }
+        guard !trimmed.isEmpty, let api, let token = authSession?.token, let room else { return false }
         do {
-            let response = try await api.sendMessage(token: token, sessionId: sessionId, body: trimmed)
+            let response: ChatSendResponse
+            switch room {
+            case .session(let id, _):
+                response = try await api.sendMessage(token: token, sessionId: id, body: trimmed)
+            case .group(let id, _):
+                response = try await api.sendGroupMessage(token: token, groupId: id, body: trimmed)
+            }
             appendUnique(ChatMessage(dto: response.message))
+            return true
         } catch {
-            // dropped while offline; the user can retry
+            return false
         }
     }
 
     private func loadHistory() async {
-        guard let api, let token = authSession?.token else { return }
+        guard let api, let token = authSession?.token, let room else { return }
         do {
-            let response = try await api.fetchMessages(token: token, sessionId: sessionId)
+            let response: ChatHistoryResponse
+            switch room {
+            case .session(let id, _):
+                response = try await api.fetchMessages(token: token, sessionId: id)
+            case .group(let id, _):
+                response = try await api.fetchGroupMessages(token: token, groupId: id)
+            }
             messages = response.messages.map(ChatMessage.init(dto:))
         } catch {
             // keep whatever is on screen if history can't load
@@ -60,8 +94,9 @@ final class ChatViewModel: ObservableObject {
     }
 
     private func connect() {
-        guard let api, let token = authSession?.token,
-              let url = Self.socketURL(base: api.baseURL, sessionId: sessionId, token: token) else { return }
+        guard started else { return }
+        guard let api, let token = authSession?.token, let room,
+              let url = Self.socketURL(base: api.baseURL, room: room, token: token) else { return }
         let task = URLSession.shared.webSocketTask(with: url)
         socket = task
         task.resume()
@@ -83,7 +118,10 @@ final class ChatViewModel: ObservableObject {
                     Task { @MainActor [weak self] in self?.receive() }
                 }
             case .failure:
-                break // socket closed; loop ends
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: .seconds(2))
+                    self?.connect()
+                }
             }
         }
     }
@@ -96,8 +134,18 @@ final class ChatViewModel: ObservableObject {
         appendUnique(ChatMessage(dto: dto))
     }
 
-    private static func socketURL(base: URL, sessionId: String, token: String) -> URL? {
-        let target = base.appendingPathComponent("ws/sessions/\(sessionId)")
+    private static func socketURL(base: URL, room: ChatRoom, token: String) -> URL? {
+        let folder: String
+        let id: String
+        switch room {
+        case .session(let sessionId, _):
+            folder = "sessions"
+            id = sessionId
+        case .group(let groupId, _):
+            folder = "groups"
+            id = groupId
+        }
+        let target = base.appending(path: "ws").appending(path: folder).appending(path: id)
         var components = URLComponents(url: target, resolvingAgainstBaseURL: false)
         components?.scheme = (base.scheme == "https") ? "wss" : "ws"
         components?.queryItems = [URLQueryItem(name: "token", value: token)]

@@ -15,6 +15,8 @@ struct DevLoginRequest: Codable {
 
 struct DevLoginResponse: Codable {
     let token: String
+    let accessToken: String?
+    let refreshToken: String?
     let user: UserProfile
 }
 
@@ -122,7 +124,61 @@ struct CreateSessionRequest: Codable {
     let shuttlecockCostVnd: Int?
     let skillLevel: SkillLevel
     let visibility: String
+    let costTrackingEnabled: Bool?
+    let feePerPlayerVnd: Int?
+    let venueLat: Double?
+    let venueLng: Double?
     let imageUrls: [String]?
+}
+
+struct UpdateProfileRequest: Codable {
+    let displayName: String?
+    let avatarUrl: String?
+    let defaultSkillLevel: SkillLevel?
+}
+
+struct NotificationPreferenceDTO: Codable {
+    let remindersEnabled: Bool
+    let statusChangesEnabled: Bool
+    let waitlistEnabled: Bool
+    let reminderLeadMinutes: Int
+}
+
+struct NotificationPreferenceResponse: Codable {
+    let preference: NotificationPreferenceDTO
+}
+
+struct UpdateNotificationPreferenceRequest: Codable {
+    let remindersEnabled: Bool?
+    let statusChangesEnabled: Bool?
+    let waitlistEnabled: Bool?
+    let reminderLeadMinutes: Int?
+}
+
+struct InvitePreviewResponse: Codable {
+    let invite: InvitePreview
+}
+
+struct InvitePreview: Codable {
+    struct GroupRef: Codable {
+        let id: String
+        let name: String
+    }
+
+    let id: String
+    let token: String
+    let group: GroupRef?
+    let session: SessionDTO?
+}
+
+struct AcceptInviteResponse: Codable {
+    struct GroupRef: Codable {
+        let id: String
+        let name: String
+    }
+
+    let group: GroupRef
+    let session: SessionDTO?
 }
 
 struct CreateSessionResponse: Codable {
@@ -237,6 +293,7 @@ struct NotificationDTO: Codable {
     let id: String
     let type: String
     let createdAt: String
+    let readAt: String?
     let session: NotificationSessionDTO?
 }
 
@@ -275,7 +332,8 @@ extension AppNotification {
             title: title,
             message: message,
             createdAt: APIDateFormatter.date(from: dto.createdAt),
-            isRead: false
+            isRead: dto.readAt != nil,
+            sessionId: dto.session?.id
         )
     }
 }
@@ -286,6 +344,10 @@ struct RegisterDeviceRequest: Codable {
     let deviceToken: String
     let platform: String
     let appVersion: String?
+}
+
+struct UnregisterDeviceRequest: Codable {
+    let deviceToken: String
 }
 
 struct DeviceDTO: Codable {
@@ -512,14 +574,19 @@ struct SessionDTO: Codable, Identifiable, Hashable {
     let currency: String
     let skillLevel: SkillLevel
     let visibility: String
+    let costTrackingEnabled: Bool?
+    let feePerPlayerVnd: Int?
+    let venueLat: Double?
+    let venueLng: Double?
     let status: String
     let createdAt: String
     let updatedAt: String
     let group: Group
     let inviteUrlToken: String?
     let summary: Summary
-    let participants: [Participant]
-    let courts: [Court]
+    /// Omitted on the discovery feed (card payload). Present on session detail.
+    let participants: [Participant]?
+    let courts: [Court]?
 }
 
 struct APIEnvelope<T: Decodable>: Decodable {

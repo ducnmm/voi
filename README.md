@@ -1,6 +1,6 @@
 # Voi
 
-Voi is a spec-driven, web-first product for organizing casual badminton sessions with small groups. A native iOS app is planned as a later channel.
+Voi is a spec-driven, iOS-first product for organizing casual badminton sessions with small groups. A responsive web app supports invite links and users who do not have the native app.
 
 The working product direction is:
 
@@ -8,13 +8,13 @@ The working product direction is:
 
 ## Current Phase
 
-This repository is in the foundation phase. Product specs are the source of truth, and implementation starts from the MVP backend and the web app. The iOS skeleton remains as a reference for the later mobile channel.
+This repository is in the foundation phase. Product specs are the source of truth, and implementation prioritizes the MVP backend and native iOS app. The web app is a companion client for invite links and fallback access.
 
 ## Project Layout
 
 - `apps/api`: custom TypeScript backend.
-- `apps/web`: Next.js web app (primary client).
-- `apps/ios`: SwiftUI iOS source skeleton (deprioritized reference for the later mobile channel).
+- `apps/web`: Next.js web app (companion and invite-link fallback client).
+- `apps/ios`: SwiftUI iOS app (primary client).
 - `packages/shared`: shared TypeScript contracts and constants.
 - `docs`: product, process, architecture, and feature specs.
 
@@ -65,7 +65,7 @@ pnpm verify
 
 ## Product Constraints
 
-- Start with web (native iOS to follow).
+- Start with native iOS (web companion and invite-link fallback alongside it).
 - Start with badminton.
 - Start with group scheduling, not venue booking.
 - Use a custom TypeScript backend.

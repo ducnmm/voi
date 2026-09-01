@@ -8,7 +8,15 @@ import {
   vi
 } from "vitest";
 import type { FastifyInstance } from "fastify";
-import { auth, buildTestApp, prisma, resetDb } from "../helpers.js";
+import {
+  auth,
+  buildTestApp,
+  createGroup,
+  createSession,
+  devLogin,
+  prisma,
+  resetDb
+} from "../helpers.js";
 import { verifyGoogleIdToken } from "../../src/services/identity/google.js";
 
 vi.mock("../../src/services/identity/google.js", () => ({
@@ -124,5 +132,110 @@ describe("refresh + logout", () => {
 
   it("rejects an unknown refresh token", async () => {
     expect((await refresh("garbage")).statusCode).toBe(401);
+  });
+});
+
+describe("POST /auth/apple", () => {
+  it("returns 501 until Apple Sign-In is configured", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/auth/apple",
+      payload: { identityToken: "x" }
+    });
+    expect(res.statusCode).toBe(501);
+    expect(res.json().error.code).toBe("NOT_IMPLEMENTED");
+  });
+});
+
+describe("DELETE /me", () => {
+  it("deletes a host who owns groups and sessions", async () => {
+    const host = await devLogin(app, "host_del@voi.test");
+    const groupId = await createGroup(app, host.token);
+    await createSession(app, host.token, groupId);
+    const res = await app.inject({
+      method: "DELETE",
+      url: "/v1/me",
+      headers: auth(host.token)
+    });
+    expect(res.statusCode).toBe(200);
+    expect(await prisma.user.findUnique({ where: { id: host.userId } })).toBeNull();
+  });
+
+  it("refuses to delete a host when other people are still in the group", async () => {
+    const host = await devLogin(app, "host_keep@voi.test");
+    const player = await devLogin(app, "player_keep@voi.test");
+    const groupId = await createGroup(app, host.token);
+    await prisma.groupMember.create({
+      data: { groupId, userId: player.userId, role: "MEMBER" }
+    });
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: "/v1/me",
+      headers: auth(host.token)
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error.code).toBe("CONFLICT");
+    expect(await prisma.user.findUnique({ where: { id: host.userId } })).not.toBeNull();
+    expect(await prisma.group.findUnique({ where: { id: groupId } })).not.toBeNull();
+    expect(await prisma.user.findUnique({ where: { id: player.userId } })).not.toBeNull();
+  });
+
+  it("refuses to delete a host when other people are still in a hosted session", async () => {
+    const host = await devLogin(app, "host_sess@voi.test");
+    const player = await devLogin(app, "player_sess@voi.test");
+    const groupId = await createGroup(app, host.token);
+    const session = await createSession(app, host.token, groupId);
+    await prisma.sessionParticipant.create({
+      data: {
+        sessionId: session.id,
+        userId: player.userId,
+        rsvpStatus: "JOINED"
+      }
+    });
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: "/v1/me",
+      headers: auth(host.token)
+    });
+    expect(res.statusCode).toBe(409);
+    expect(await prisma.session.findUnique({ where: { id: session.id } })).not.toBeNull();
+    expect(await prisma.user.findUnique({ where: { id: host.userId } })).not.toBeNull();
+  });
+
+  it("lets a non-host member leave without deleting the group", async () => {
+    const host = await devLogin(app, "host_stays@voi.test");
+    const player = await devLogin(app, "player_leaves@voi.test");
+    const groupId = await createGroup(app, host.token);
+    await prisma.groupMember.create({
+      data: { groupId, userId: player.userId, role: "MEMBER" }
+    });
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: "/v1/me",
+      headers: auth(player.token)
+    });
+    expect(res.statusCode).toBe(200);
+    expect(await prisma.user.findUnique({ where: { id: player.userId } })).toBeNull();
+    expect(await prisma.group.findUnique({ where: { id: groupId } })).not.toBeNull();
+    expect(await prisma.user.findUnique({ where: { id: host.userId } })).not.toBeNull();
+  });
+
+  it("deletes the authenticated user", async () => {
+    const { token, userId } = await (async () => {
+      mockVerify.mockResolvedValue({ sub: "g-del", email: "gone@voi.test", name: "G" });
+      const body = (await google("t")).json();
+      return { token: body.accessToken, userId: body.user.id };
+    })();
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: "/v1/me",
+      headers: auth(token)
+    });
+    expect(res.statusCode).toBe(200);
+    expect(await prisma.user.findUnique({ where: { id: userId } })).toBeNull();
   });
 });

@@ -1,8 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { RegisterPushDeviceSchema } from "@voi/shared";
+import {
+  RegisterPushDeviceSchema,
+  UnregisterPushDeviceSchema
+} from "@voi/shared";
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
-import { notFound } from "../utils/api-error.js";
+import { conflict, notFound } from "../utils/api-error.js";
 
 export async function deviceRoutes(app: FastifyInstance): Promise<void> {
   app.get("/devices", { preHandler: app.authenticate }, async (request) => {
@@ -27,21 +30,33 @@ export async function deviceRoutes(app: FastifyInstance): Promise<void> {
     const userId = getAuthenticatedUserId(request);
     const body = RegisterPushDeviceSchema.parse(request.body);
 
-    const device = await prisma.pushDevice.upsert({
+    const existing = await prisma.pushDevice.findUnique({
       where: { deviceToken: body.deviceToken },
-      update: {
-        userId,
-        platform: body.platform,
-        appVersion: body.appVersion,
-        disabledAt: null
-      },
-      create: {
-        userId,
-        platform: body.platform,
-        deviceToken: body.deviceToken,
-        appVersion: body.appVersion
-      }
+      select: { id: true, userId: true, disabledAt: true }
     });
+
+    if (existing && existing.userId !== userId && existing.disabledAt == null) {
+      throw conflict("This device is already registered to another account");
+    }
+
+    const device = existing
+      ? await prisma.pushDevice.update({
+          where: { id: existing.id },
+          data: {
+            userId,
+            platform: body.platform,
+            appVersion: body.appVersion,
+            disabledAt: null
+          }
+        })
+      : await prisma.pushDevice.create({
+          data: {
+            userId,
+            platform: body.platform,
+            deviceToken: body.deviceToken,
+            appVersion: body.appVersion
+          }
+        });
 
     return reply.code(201).send({
       device: {
@@ -53,6 +68,20 @@ export async function deviceRoutes(app: FastifyInstance): Promise<void> {
       }
     });
   });
+
+  app.post(
+    "/devices/unregister",
+    { preHandler: app.authenticate },
+    async (request) => {
+      const userId = getAuthenticatedUserId(request);
+      const body = UnregisterPushDeviceSchema.parse(request.body);
+      await prisma.pushDevice.updateMany({
+        where: { deviceToken: body.deviceToken, userId },
+        data: { disabledAt: new Date() }
+      });
+      return { ok: true };
+    }
+  );
 
   app.delete(
     "/devices/:deviceId",

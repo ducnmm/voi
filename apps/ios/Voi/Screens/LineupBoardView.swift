@@ -46,6 +46,7 @@ struct LineupBoardView: View {
                     PlayerRow(player: player, trailingIcon: "ellipsis.circle") {
                         moveMenu(for: player, excluding: court.id)
                     }
+                    .accessibilityIdentifier(A11y.Lineup.player(player.displayName))
                 }
             }
         }
@@ -67,6 +68,7 @@ struct LineupBoardView: View {
                     PlayerRow(player: player, trailingIcon: "plus.circle") {
                         assignMenu(for: player)
                     }
+                    .accessibilityIdentifier(A11y.Lineup.player(player.displayName))
                 }
             }
         }
@@ -124,7 +126,7 @@ private struct PlayerRow<MenuContent: View>: View {
             }
             .padding(VoiSpacing.sm)
             .background(VoiColor.background)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: VoiRadius.compact, style: .continuous))
         }
     }
 }

@@ -137,7 +137,7 @@ describe("match results", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("lists results in creation order (public read)", async () => {
+  it("lists results in creation order (public read for PRIVATE_LINK)", async () => {
     const { host, sessionId } = await setup();
     for (const label of ["A", "B"]) {
       await app.inject({
@@ -153,5 +153,47 @@ describe("match results", () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().results.map((r: any) => r.label)).toEqual(["A", "B"]);
+  });
+
+  it("hides GROUP_ONLY results from strangers", async () => {
+    const host = await devLogin(app, "ci_go_host@voi.test");
+    const member = await devLogin(app, "ci_go_member@voi.test");
+    const stranger = await devLogin(app, "ci_go_stranger@voi.test");
+    const gid = await createGroup(app, host.token);
+    await prisma.groupMember.create({
+      data: { groupId: gid, userId: member.userId, role: "MEMBER" }
+    });
+    const session = await createSession(app, host.token, gid, {
+      visibility: "GROUP_ONLY"
+    });
+    await app.inject({
+      method: "POST",
+      url: `/v1/sessions/${session.id}/results`,
+      headers: auth(host.token),
+      payload: { label: "A", scoreA: 21, scoreB: 10 }
+    });
+
+    expect(
+      (await app.inject({ method: "GET", url: `/v1/sessions/${session.id}/results` }))
+        .statusCode
+    ).toBe(401);
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: `/v1/sessions/${session.id}/results`,
+          headers: auth(stranger.token)
+        })
+      ).statusCode
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: `/v1/sessions/${session.id}/results`,
+          headers: auth(member.token)
+        })
+      ).statusCode
+    ).toBe(200);
   });
 });

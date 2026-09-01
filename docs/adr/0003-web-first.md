@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted (2026-06-19). Supersedes [ADR 0001: Start iOS First](0001-ios-first.md).
+Superseded by the product decision to return to iOS-first (2026-08-04).
+
+This decision is retained below for historical context only. The current decision is [ADR 0001: Start iOS First](0001-ios-first.md).
 
 ## Context
 
@@ -18,7 +20,7 @@ iOS slows the core feedback loop for an early-stage product:
 The backend (ADR 0002) is client-agnostic, so the choice of first client does not
 change the domain model or API.
 
-## Decision
+## Historical Decision
 
 Make the web app the primary client. Build it with Next.js (App Router) and React,
 consuming the existing Fastify API and the shared contracts in `packages/shared`.

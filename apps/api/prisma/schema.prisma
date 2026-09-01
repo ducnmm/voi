@@ -138,7 +138,9 @@ model Group {
   members           GroupMember[]
   sessions          Session[]
   invites           Invite[]
+  chatMessages      ChatMessage[]
 
+  @@index([createdByUserId])
   @@map("groups")
 }
 
@@ -194,6 +196,7 @@ model Session {
 
   @@index([groupId, startsAt])
   @@index([hostUserId])
+  @@index([status, endsAt])
   @@map("sessions")
 }
 
@@ -250,7 +253,7 @@ model Invite {
   token     String    @unique
   groupId   String?   @map("group_id")
   sessionId String?   @map("session_id")
-  expiresAt DateTime? @map("expires_at")
+  expiresAt DateTime  @map("expires_at")
   createdAt DateTime  @default(now()) @map("created_at")
   group     Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   session   Session?  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -270,11 +273,14 @@ model Notification {
   sentAt         DateTime?                  @map("sent_at")
   attempts       Int                        @default(0)
   nextAttemptAt  DateTime?                  @map("next_attempt_at")
+  readAt         DateTime?                  @map("read_at")
   createdAt      DateTime                   @default(now()) @map("created_at")
   user           User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   session        Session?                   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([userId, deliveryStatus])
+  @@index([userId, createdAt])
+  @@index([deliveryStatus, createdAt])
   @@index([sessionId])
   @@map("notifications")
 }
@@ -335,14 +341,17 @@ model Review {
 
 model ChatMessage {
   id        String   @id @default(cuid())
-  sessionId String   @map("session_id")
+  sessionId String?  @map("session_id")
+  groupId   String?  @map("group_id")
   authorId  String   @map("author_id")
   body      String
   createdAt DateTime @default(now()) @map("created_at")
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  group     Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
+  @@index([groupId, createdAt])
   @@map("chat_messages")
 }
 

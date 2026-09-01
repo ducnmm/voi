@@ -23,6 +23,7 @@ struct WriteReviewView: View {
                                 .font(.title2)
                                 .foregroundStyle(VoiColor.accent)
                                 .onTapGesture { rating = star }
+                                .accessibilityIdentifier(A11y.Review.star(star))
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -32,6 +33,7 @@ struct WriteReviewView: View {
                 Section("Comment") {
                     TextField("Share how it went…", text: $comment, axis: .vertical)
                         .lineLimit(3...6)
+                        .accessibilityIdentifier(A11y.Review.comment)
                 }
             }
             .navigationTitle("Write a review")
@@ -39,6 +41,7 @@ struct WriteReviewView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityIdentifier(A11y.Review.cancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Submit") {
@@ -46,6 +49,7 @@ struct WriteReviewView: View {
                         dismiss()
                     }
                     .disabled(trimmed.isEmpty)
+                    .accessibilityIdentifier(A11y.Review.submit)
                 }
             }
         }

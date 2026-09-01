@@ -32,28 +32,36 @@ struct CreateSessionView: View {
     @State private var imageUrls: [String] = []
     @State private var isUploadingImage = false
 
-    init(groupName: String, editing: SessionSummary? = nil, onSubmit: @escaping (CreateSessionDraft) async throws -> Void) {
+    init(
+        groupName: String,
+        editing: SessionSummary? = nil,
+        duplicating: SessionSummary? = nil,
+        onSubmit: @escaping (CreateSessionDraft) async throws -> Void
+    ) {
         self.groupName = groupName
         self.editingSession = editing
         self.onSubmit = onSubmit
 
-        _title = State(initialValue: editing?.title ?? "Tuesday Night Badminton")
-        _venueName = State(initialValue: editing?.venueName ?? "Ky Hoa Badminton")
-        _startsAt = State(initialValue: editing?.startsAt ?? Date())
-        _endsAt = State(initialValue: editing?.endsAt ?? Date().addingTimeInterval(60 * 60 * 2))
-        _courtCount = State(initialValue: editing?.courtCount ?? 2)
-        _maxPlayers = State(initialValue: editing?.maxPlayers ?? 8)
-        _feeTotalVnd = State(initialValue: editing?.feeTotalVnd ?? 240_000)
-        _shuttlecockCostVnd = State(initialValue: editing?.shuttlecockCostVnd ?? 60_000)
-        _skillLevel = State(initialValue: editing?.skillLevel ?? .intermediate)
-        if let fixed = editing?.fixedPricePerPlayerVnd {
+        let source = editing ?? duplicating
+        let offset: TimeInterval = duplicating != nil ? 7 * 24 * 60 * 60 : 0
+        let defaultStart = Date().addingTimeInterval(24 * 60 * 60)
+        _title = State(initialValue: source?.title ?? "Tuesday Night Badminton")
+        _venueName = State(initialValue: source?.venueName ?? "Ky Hoa Badminton")
+        _startsAt = State(initialValue: (source?.startsAt ?? defaultStart).addingTimeInterval(offset))
+        _endsAt = State(initialValue: (source?.endsAt ?? defaultStart.addingTimeInterval(60 * 60 * 2)).addingTimeInterval(offset))
+        _courtCount = State(initialValue: source?.courtCount ?? 2)
+        _maxPlayers = State(initialValue: source?.maxPlayers ?? 8)
+        _feeTotalVnd = State(initialValue: source?.feeTotalVnd ?? 240_000)
+        _shuttlecockCostVnd = State(initialValue: source?.shuttlecockCostVnd ?? 60_000)
+        _skillLevel = State(initialValue: source?.skillLevel ?? .intermediate)
+        if let fixed = source?.fixedPricePerPlayerVnd {
             _pricingMode = State(initialValue: .fixed)
             _pricePerPlayerVnd = State(initialValue: fixed)
         } else {
-            _pricingMode = State(initialValue: editing == nil ? .fixed : .split)
+            _pricingMode = State(initialValue: source == nil ? .fixed : .split)
             _pricePerPlayerVnd = State(initialValue: 80_000)
         }
-        _imageUrls = State(initialValue: editing?.imageUrls.map(\.absoluteString) ?? [])
+        _imageUrls = State(initialValue: source?.imageUrls.map(\.absoluteString) ?? [])
     }
 
     private var isEditing: Bool { editingSession != nil }
@@ -69,7 +77,9 @@ struct CreateSessionView: View {
 
                 Section("Session") {
                     TextField("Title", text: $title)
+                        .accessibilityIdentifier(A11y.Create.title)
                     TextField("Venue", text: $venueName)
+                        .accessibilityIdentifier(A11y.Create.venue)
                     Picker("Level", selection: $skillLevel) {
                         ForEach(SkillLevel.allCases) { level in
                             Text(level.label).tag(level)
@@ -128,6 +138,7 @@ struct CreateSessionView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityIdentifier(A11y.Create.cancel)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -135,6 +146,7 @@ struct CreateSessionView: View {
                         Task { await submit() }
                     }
                     .disabled(!canSubmit || isSaving)
+                    .accessibilityIdentifier(A11y.Create.submit)
                 }
             }
             .onChange(of: courtCount) { _, newValue in
@@ -211,7 +223,7 @@ struct CreateSessionView: View {
             }
         }
         .frame(width: 88, height: 88)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: VoiRadius.control, style: .continuous))
     }
 
     /// Upload every freshly-picked photo (max 6), then replace the set with the

@@ -8,7 +8,8 @@ A host can create a badminton session, share it with a group, collect responses,
 
 ## In Scope
 
-- Web-first experience (responsive, mobile-friendly).
+- Native iOS-first experience (SwiftUI).
+- Responsive web companion for invite links and users without the app.
 - Badminton as the only supported sport.
 - Manual venue entry.
 - Groups.
@@ -18,7 +19,7 @@ A host can create a badminton session, share it with a group, collect responses,
 - Capacity and waitlist.
 - Court lineup board.
 - Basic cost split.
-- Notification records with in-app surfacing; web push or email delivery later.
+- Notification records with in-app surfacing; APNs delivery later through a worker.
 
 ## Out of Scope
 
@@ -29,7 +30,6 @@ A host can create a badminton session, share it with a group, collect responses,
 - Advanced matchmaking.
 - Ranking and competitive ladders.
 - Tournament brackets.
-- Native iOS app (deferred to a later channel).
 - Android app.
 
 ## Core MVP Flow
@@ -51,4 +51,3 @@ A host can create a badminton session, share it with a group, collect responses,
 - A host can understand the session status at a glance.
 - A session page can replace the pinned message in a chat group.
 - The host can see who has not paid without using a spreadsheet.
-

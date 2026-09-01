@@ -1,13 +1,11 @@
 import SwiftUI
 
-/// Mutable, in-memory mock data store so the demo features (writing reviews,
-/// reading/dismissing alerts, etc.) feel real before a backend exists. Seeded
-/// from `Mock`; swap each array for a fetched payload when wiring the API.
+/// Shared client cache for people, alerts, follows, and saved sessions.
 @MainActor
 final class DemoStore: ObservableObject {
-    @Published var hosts: [PersonProfile] = Mock.hosts
-    @Published var players: [PersonProfile] = Mock.players
-    @Published var notifications: [AppNotification] = AppNotification.samples
+    @Published var hosts: [PersonProfile] = []
+    @Published var players: [PersonProfile] = []
+    @Published var notifications: [AppNotification] = []
 
     var unreadCount: Int { notifications.filter { !$0.isRead }.count }
 
@@ -51,8 +49,6 @@ final class DemoStore: ObservableObject {
 
     // MARK: Alerts
 
-    /// Loads the signed-in user's notifications from the API (read state stays
-    /// client-side for now — the server has no read flag yet).
     func loadNotifications(api: APIClient, token: String?) async {
         guard let token else { return }
         do {
@@ -63,13 +59,31 @@ final class DemoStore: ObservableObject {
         }
     }
 
-    func markAllNotificationsRead() {
+    func markAllNotificationsRead(api: APIClient? = nil, token: String? = nil) {
         for index in notifications.indices { notifications[index].isRead = true }
+        guard let api, let token else { return }
+        Task {
+            _ = try? await api.markAllNotificationsRead(token: token)
+        }
     }
 
-    func toggleRead(_ id: String) {
+    func markRead(_ id: String, api: APIClient? = nil, token: String? = nil) {
+        guard let index = notifications.firstIndex(where: { $0.id == id }) else { return }
+        if !notifications[index].isRead {
+            notifications[index].isRead = true
+            guard let api, let token else { return }
+            Task { _ = try? await api.markNotificationRead(token: token, id: id) }
+        }
+    }
+
+    func toggleRead(_ id: String, api: APIClient? = nil, token: String? = nil) {
         guard let index = notifications.firstIndex(where: { $0.id == id }) else { return }
         notifications[index].isRead.toggle()
+        let nowRead = notifications[index].isRead
+        guard nowRead, let api, let token else { return }
+        Task {
+            _ = try? await api.markNotificationRead(token: token, id: id)
+        }
     }
 
     func removeNotification(_ id: String) {
@@ -88,28 +102,6 @@ final class DemoStore: ObservableObject {
         notifications.insert(item, at: 0)
     }
 
-    // MARK: Session chat
-
-    @Published var chats: [String: [ChatMessage]] = [:]
-
-    private let seedMessages: [ChatMessage] = [
-        ChatMessage(id: "seed-1", author: Mock.minh, text: "Tối nay đủ người rồi nhé mọi người 💪", date: Date().addingTimeInterval(-3600)),
-        ChatMessage(id: "seed-2", author: Mock.an, text: "Ai mang cầu dư cho mình mượn vài quả với 🏸", date: Date().addingTimeInterval(-1800)),
-        ChatMessage(id: "seed-3", author: Mock.linh, text: "Mình tới sớm 10p giữ sân nha", date: Date().addingTimeInterval(-600))
-    ]
-
-    func messages(for sessionId: String) -> [ChatMessage] {
-        chats[sessionId] ?? seedMessages
-    }
-
-    func send(_ text: String, to sessionId: String, by author: Player) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        var list = messages(for: sessionId)
-        list.append(ChatMessage(id: "msg-\(sessionId)-\(list.count)", author: author, text: trimmed, date: Date()))
-        chats[sessionId] = list
-    }
-
     // MARK: Following
 
     @Published var following: Set<String> = []
@@ -125,7 +117,7 @@ final class DemoStore: ObservableObject {
 
     func toggleFollow(_ userId: String, api: APIClient, token: String?) async {
         let wasFollowing = following.contains(userId)
-        if wasFollowing { following.remove(userId) } else { following.insert(userId) } // optimistic
+        if wasFollowing { following.remove(userId) } else { following.insert(userId) }
         guard let token else { return }
         do {
             if wasFollowing {
@@ -134,6 +126,7 @@ final class DemoStore: ObservableObject {
                 try await api.followUser(token: token, userId: userId)
             }
         } catch {
+            if wasFollowing { following.insert(userId) } else { following.remove(userId) }
         }
     }
 
@@ -163,7 +156,7 @@ final class DemoStore: ObservableObject {
                 try await api.saveSession(token: token, sessionId: id)
             }
         } catch {
-            // keep the optimistic state when offline
+            if wasFavorite { favorites.insert(id) } else { favorites.remove(id) }
         }
     }
 

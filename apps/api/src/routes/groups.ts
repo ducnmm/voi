@@ -5,11 +5,14 @@ import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
 import { forbidden, notFound } from "../utils/api-error.js";
 import { env } from "../config/env.js";
+import { inviteExpiresAt } from "../services/invites.js";
+import { userSummarySelect } from "../services/user-presenter.js";
 
 export async function groupRoutes(app: FastifyInstance): Promise<void> {
   app.get("/groups", { preHandler: app.authenticate }, async (request) => {
     const userId = getAuthenticatedUserId(request);
 
+    const now = new Date();
     const groups = await prisma.group.findMany({
       where: {
         members: {
@@ -17,10 +20,13 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
         }
       },
       include: {
-        members: true,
-        sessions: {
-          orderBy: { startsAt: "asc" },
-          take: 5
+        _count: {
+          select: {
+            members: true,
+            sessions: {
+              where: { status: "SCHEDULED", endsAt: { gte: now } }
+            }
+          }
         }
       },
       orderBy: { updatedAt: "desc" }
@@ -34,8 +40,8 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
         defaultVenueName: group.defaultVenueName,
         defaultSkillLevel: group.defaultSkillLevel,
         currency: group.currency,
-        memberCount: group.members.length,
-        upcomingSessionCount: group.sessions.length
+        memberCount: group._count.members,
+        upcomingSessionCount: group._count.sessions
       }))
     };
   });
@@ -90,11 +96,15 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
       },
       include: {
         members: {
-          include: { user: true },
+          include: {
+            user: { select: userSummarySelect }
+          },
           orderBy: { joinedAt: "asc" }
         },
         sessions: {
-          orderBy: { startsAt: "asc" }
+          where: { status: { not: "DRAFT" } },
+          orderBy: { startsAt: "desc" },
+          take: 50
         }
       }
     });
@@ -144,10 +154,12 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
       await assertCanHostGroup(userId, params.groupId);
 
       const token = randomBytes(18).toString("base64url");
+      const expiresAt = inviteExpiresAt();
       const invite = await prisma.invite.create({
         data: {
           groupId: params.groupId,
-          token
+          token,
+          expiresAt
         }
       });
 
@@ -155,6 +167,7 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
         invite: {
           id: invite.id,
           token: invite.token,
+          expiresAt: invite.expiresAt.toISOString(),
           inviteUrl: `${env.APP_BASE_URL.replace(/\/?$/, "/")}invites/${token}`
         }
       });

@@ -25,7 +25,7 @@ export async function verifyGoogleIdToken(idToken: string): Promise<GoogleIdenti
   });
   const payload = ticket.getPayload();
 
-  if (!payload?.sub || !payload.email) {
+  if (!payload?.sub || !payload.email || payload.email_verified !== true) {
     throw new Error("Invalid Google token payload");
   }
 

@@ -53,6 +53,15 @@ enum VoiSpacing {
     static let xl: CGFloat = 24
 }
 
+enum VoiRadius {
+    /// Full-width surfaces and cards, matching the Home session cards.
+    static let card: CGFloat = 12
+    static let control: CGFloat = 10
+    static let compact: CGFloat = 8
+    static let prominent: CGFloat = 16
+    static let message: CGFloat = 18
+}
+
 struct CapsuleLabel: View {
     let text: String
     let systemImage: String?
@@ -170,9 +179,9 @@ extension View {
         self
             .padding(VoiSpacing.lg)
             .background(VoiColor.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous)
                     .stroke(VoiColor.line, lineWidth: 1)
             )
     }

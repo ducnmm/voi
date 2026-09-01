@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma, Session } from "@prisma/client";
 import { z } from "zod";
 import {
@@ -19,6 +19,8 @@ import {
   forbidden,
   notFound
 } from "../utils/api-error.js";
+import { assertCanAccessSession } from "../services/session-access.js";
+import { assertInviteActive, inviteExpiresAt } from "../services/invites.js";
 import {
   calculateNextWaitlistPosition,
   resolveJoinStatus
@@ -32,6 +34,8 @@ import { withSerializableRetry } from "../services/transactions.js";
 import {
   presentMatchResult,
   presentSession,
+  presentSessionCard,
+  sessionFeedInclude,
   sessionInclude
 } from "../services/session-presenter.js";
 import {
@@ -74,8 +78,8 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
     const where: Prisma.SessionWhereInput = {
       group: { members: { some: { userId } } },
       ...(query.scope === "upcoming"
-        ? { status: "SCHEDULED", startsAt: { gte: now } }
-        : { startsAt: { lt: now }, status: { not: "DRAFT" } }),
+        ? { status: "SCHEDULED", endsAt: { gte: now } }
+        : { endsAt: { lt: now }, status: { not: "DRAFT" } }),
       ...(query.skill ? { skillLevel: query.skill } : {}),
       ...(query.venue
         ? { venueName: { contains: query.venue, mode: "insensitive" } }
@@ -104,7 +108,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 
     const rows = await prisma.session.findMany({
       where,
-      include: sessionInclude,
+      include: sessionFeedInclude,
       orderBy:
         query.scope === "upcoming"
           ? [{ startsAt: "asc" }, { id: "asc" }]
@@ -112,7 +116,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
       take: wantsKeyset ? query.limit + 1 : 200
     });
 
-    let sessions = rows.map(presentSession);
+    let sessions = rows.map(presentSessionCard);
 
     if (query.availableOnly) {
       sessions = sessions.filter(
@@ -220,11 +224,29 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
           },
           invites: {
             create: {
-              token
+              token,
+              expiresAt: inviteExpiresAt()
+            }
+          },
+          participants: {
+            create: {
+              userId,
+              rsvpStatus: "JOINED",
+              joinedAt: new Date(),
+              paymentStatus: body.costTrackingEnabled ? "UNPAID" : "NOT_REQUIRED"
             }
           }
         },
         include: sessionInclude
+      });
+
+      await prisma.$transaction(async (tx) => {
+        await scheduleSessionReminder({
+          tx,
+          userId,
+          sessionId: session.id,
+          startsAt
+        });
       });
 
       return reply.code(201).send({
@@ -236,17 +258,30 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/sessions/:sessionId", async (request) => {
     const params = request.params as { sessionId: string };
-    const session = await prisma.session.findUnique({
+    const meta = await prisma.session.findUnique({
+      where: { id: params.sessionId },
+      select: { id: true, groupId: true, visibility: true, hostUserId: true }
+    });
+
+    if (!meta) {
+      throw notFound("Session not found");
+    }
+
+    const userId = await optionalUserId(request);
+    await assertCanAccessSession(meta, userId);
+
+    const session = await prisma.session.findUniqueOrThrow({
       where: { id: params.sessionId },
       include: sessionInclude
     });
 
-    if (!session) {
-      throw notFound("Session not found");
+    const presented = presentSession(session);
+    if (userId !== session.hostUserId) {
+      presented.inviteUrlToken = null;
     }
 
     return {
-      session: presentSession(session)
+      session: presented
     };
   });
 
@@ -301,6 +336,8 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
           throw badRequest("Max players cannot be lower than joined players");
         }
 
+        const extraSlots = Math.max(0, nextMaxPlayers - current.maxPlayers);
+
         await syncCourts({
           tx,
           sessionId: current.id,
@@ -348,6 +385,13 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
             tx,
             sessionId: updated.id
           });
+        }
+
+        let remaining = extraSlots;
+        while (remaining > 0) {
+          const promoted = await promoteFirstWaitlistedParticipant(tx, updated);
+          if (!promoted) break;
+          remaining -= 1;
         }
 
         return tx.session.findUniqueOrThrow({
@@ -419,9 +463,9 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
     const invite = await prisma.invite.findUnique({
       where: { token: params.token },
       include: {
-        group: true,
+        group: { select: { id: true, name: true } },
         session: {
-          include: sessionInclude
+          include: sessionFeedInclude
         }
       }
     });
@@ -430,9 +474,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
       throw notFound("Invite not found");
     }
 
-    if (invite.expiresAt && invite.expiresAt < new Date()) {
-      throw notFound("Invite expired");
-    }
+    assertInviteActive(invite);
 
     return {
       invite: {
@@ -444,7 +486,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
               name: invite.group.name
             }
           : null,
-        session: invite.session ? presentSession(invite.session) : null
+        session: invite.session ? presentSessionCard(invite.session) : null
       }
     };
   });
@@ -468,6 +510,20 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 
         if (session.status === "CANCELLED") {
           throw conflict("Cannot RSVP to a cancelled session");
+        }
+
+        if (session.visibility === "GROUP_ONLY") {
+          const membership = await tx.groupMember.findUnique({
+            where: {
+              groupId_userId: {
+                groupId: session.groupId,
+                userId
+              }
+            }
+          });
+          if (!membership) {
+            throw forbidden("This session is only open to group members");
+          }
         }
 
         const existing = await tx.sessionParticipant.findUnique({
@@ -527,7 +583,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
               paymentStatus:
                 existing?.paymentStatus === "PAID"
                   ? "PAID"
-                  : effectiveStatus === "JOINED" || effectiveStatus === "WAITLISTED"
+                  : effectiveStatus === "JOINED" && session.costTrackingEnabled
                     ? "UNPAID"
                     : "NOT_REQUIRED"
             },
@@ -538,7 +594,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
               joinedAt: effectiveStatus === "JOINED" ? new Date() : null,
               waitlistPosition,
               paymentStatus:
-                effectiveStatus === "JOINED" || effectiveStatus === "WAITLISTED"
+                effectiveStatus === "JOINED" && session.costTrackingEnabled
                   ? "UNPAID"
                   : "NOT_REQUIRED"
             }
@@ -796,6 +852,15 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
   // Match results: the host or any joined player can record a score.
   app.get("/sessions/:sessionId/results", async (request) => {
     const params = request.params as { sessionId: string };
+    const session = await prisma.session.findUnique({
+      where: { id: params.sessionId },
+      select: { id: true, groupId: true, visibility: true }
+    });
+    if (!session) {
+      throw notFound("Session not found");
+    }
+    await assertCanAccessSession(session, await optionalUserId(request));
+
     const results = await prisma.matchResult.findMany({
       where: { sessionId: params.sessionId },
       orderBy: { createdAt: "asc" }
@@ -856,6 +921,15 @@ async function assertCanLogResult(
   throw forbidden("Only the host or joined players can record results");
 }
 
+async function optionalUserId(request: FastifyRequest): Promise<string | null> {
+  try {
+    await request.jwtVerify();
+    return getAuthenticatedUserId(request);
+  } catch {
+    return null;
+  }
+}
+
 async function assertCanHostSession(userId: string, sessionId: string): Promise<void> {
   const session = await prisma.session.findFirst({
     where: {
@@ -905,7 +979,11 @@ async function promoteFirstWaitlistedParticipant(
       joinedAt: new Date(),
       waitlistPosition: null,
       paymentStatus:
-        firstWaitlisted.paymentStatus === "PAID" ? "PAID" : "UNPAID"
+        firstWaitlisted.paymentStatus === "PAID"
+          ? "PAID"
+          : session.costTrackingEnabled
+            ? "UNPAID"
+            : "NOT_REQUIRED"
     }
   });
 

@@ -85,6 +85,7 @@ enum Mock {
 
         return SessionSummary(
             id: "s-tuesday",
+            hostUserId: you.id,
             title: "Tuesday Night Badminton",
             startsAt: Date().addingTimeInterval(60 * 60 * 6),
             endsAt: Date().addingTimeInterval(60 * 60 * 8),
@@ -111,6 +112,7 @@ enum Mock {
 
         return SessionSummary(
             id: "s-sunday",
+            hostUserId: you.id,
             title: "Sunday Morning Rally",
             startsAt: Date().addingTimeInterval(60 * 60 * 24 * 4),
             endsAt: Date().addingTimeInterval(60 * 60 * 24 * 4 + 60 * 60 * 2),
@@ -139,6 +141,7 @@ enum Mock {
 
         return SessionSummary(
             id: "s-friday",
+            hostUserId: you.id,
             title: "Friday Smash",
             startsAt: Date().addingTimeInterval(60 * 60 * 24 * 3),
             endsAt: Date().addingTimeInterval(60 * 60 * 24 * 3 + 60 * 60 * 2),
@@ -163,6 +166,7 @@ enum Mock {
 
         return SessionSummary(
             id: "s-last-week",
+            hostUserId: you.id,
             title: "Last Week Social",
             startsAt: Date().addingTimeInterval(-60 * 60 * 24 * 7),
             endsAt: Date().addingTimeInterval(-60 * 60 * 24 * 7 + 60 * 60 * 2),

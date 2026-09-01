@@ -41,12 +41,46 @@ targets:
         UILaunchScreen: {}
         NSCalendarsUsageDescription: "Add badminton sessions to your calendar."
         NSCalendarsFullAccessUsageDescription: "Add badminton sessions to your calendar."
+        NSPhotoLibraryUsageDescription: "Attach photos when creating a session."
         GIDClientID: "291960099224-n1tslm0u0rfvjb35is8lgvb0rbrc014r.apps.googleusercontent.com"
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - "com.googleusercontent.apps.291960099224-n1tslm0u0rfvjb35is8lgvb0rbrc014r"
+          - CFBundleURLSchemes:
+              - voi
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
           NSExceptionDomains:
             localhost:
               NSExceptionAllowsInsecureHTTPLoads: true
+            127.0.0.1:
+              NSExceptionAllowsInsecureHTTPLoads: true
+  VoiUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - VoiUITests
+      - path: Voi/Support/A11y.swift
+    dependencies:
+      - target: Voi
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.voi.app.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Voi
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 68L42T9FWT
+        SWIFT_VERSION: "6.0"
+schemes:
+  Voi:
+    build:
+      targets:
+        Voi: all
+        VoiUITests: [test]
+    test:
+      config: Debug
+      gatherCoverageData: false
+      targets:
+        - name: VoiUITests
+          parallelizable: false
+          randomExecutionOrder: false

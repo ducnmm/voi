@@ -4,14 +4,19 @@ import SwiftUI
 final class SessionDetailViewModel: ObservableObject {
     @Published var session: SessionSummary
     @Published var results: [MatchScore] = []
+    @Published var actionError: String?
+    @Published var isRefreshing = false
 
     let currentPlayer: Player
-    let isHost: Bool
 
-    init(session: SessionSummary, currentPlayer: Player, isHost: Bool = true) {
+    /// Host-only UI gates. Derived from server `hostUserId`, never defaulted true.
+    var isHost: Bool {
+        !session.hostUserId.isEmpty && session.hostUserId == currentPlayer.id
+    }
+
+    init(session: SessionSummary, currentPlayer: Player) {
         self.session = session
         self.currentPlayer = currentPlayer
-        self.isHost = isHost
     }
 
     private var api: APIClient?
@@ -32,6 +37,9 @@ final class SessionDetailViewModel: ObservableObject {
     }
 
     var statusBanner: String {
+        if session.isCancelled {
+            return "This session was cancelled."
+        }
         switch myStatus {
         case .joined:
             return "You're in for this session."
@@ -51,6 +59,23 @@ final class SessionDetailViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Load
+
+    /// Re-fetch the session from the server so detail always shows fresh state.
+    func refresh() async {
+        guard let api else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
+        do {
+            guard let token else { return }
+            let response = try await api.session(token: token, id: session.id)
+            session = SessionSummary(dto: response.session)
+            actionError = nil
+        } catch {
+            // Keep the list snapshot if refresh fails (offline / local demo ids).
+        }
+    }
+
     // MARK: - RSVP
 
     func join() async { await setRSVP(.joined) }
@@ -58,6 +83,7 @@ final class SessionDetailViewModel: ObservableObject {
     func decline() async { await setRSVP(.declined) }
 
     private func setRSVP(_ status: RsvpStatus) async {
+        let previous = session
         session.setRSVP(status, for: currentPlayer) // optimistic
         guard let api, let token else { return }
         do {
@@ -67,14 +93,22 @@ final class SessionDetailViewModel: ObservableObject {
                 status: status.apiValue
             )
             session = SessionSummary(dto: response.session)
+            actionError = nil
         } catch {
-            // keep the optimistic state when offline
+            session = previous
+            actionError = Self.message(for: error, fallback: "Could not update RSVP.")
         }
     }
 
     // MARK: - Cost split
 
+    /// Host toggles paid/unpaid for a participant.
     func togglePayment(_ participant: Participant) async {
+        guard isHost else {
+            actionError = "Only the host can mark payment status."
+            return
+        }
+        let previous = session
         let nextPaid = !participant.hasPaid
         session.togglePayment(participantId: participant.id) // optimistic
         guard let api, let token else { return }
@@ -86,19 +120,35 @@ final class SessionDetailViewModel: ObservableObject {
                 status: nextPaid ? "PAID" : "UNPAID"
             )
             session = SessionSummary(dto: response.session)
+            actionError = nil
         } catch {
+            session = previous
+            actionError = Self.message(for: error, fallback: "Could not update payment.")
         }
     }
 
-    func markPaid(_ player: Player) {
+    /// Player self-mark after scanning VietQR. Server only allows hosts today —
+    /// if the current user is host, update via API; otherwise show a clear note.
+    func markPaid(_ player: Player) async {
         guard let participant = session.participants.first(where: { $0.player.id == player.id }),
               !participant.hasPaid else { return }
-        session.togglePayment(participantId: participant.id)
+
+        if isHost {
+            await togglePayment(participant)
+            return
+        }
+
+        return
     }
 
     // MARK: - Check-in (host)
 
     func toggleCheckIn(_ participant: Participant) async {
+        guard isHost else {
+            actionError = "Only the host can manage attendance."
+            return
+        }
+        let previous = session
         let wasCheckedIn = participant.isCheckedIn
         setCheckedIn(participant.id, !wasCheckedIn) // optimistic
         guard let api, let token else { return }
@@ -107,7 +157,10 @@ final class SessionDetailViewModel: ObservableObject {
                 ? try await api.uncheckIn(token: token, sessionId: session.id, participantId: participant.id)
                 : try await api.checkIn(token: token, sessionId: session.id, participantId: participant.id)
             session = SessionSummary(dto: response.session)
+            actionError = nil
         } catch {
+            session = previous
+            actionError = Self.message(for: error, fallback: "Could not update check-in.")
         }
     }
 
@@ -121,7 +174,8 @@ final class SessionDetailViewModel: ObservableObject {
     func loadResults() async {
         guard let api else { return }
         do {
-            let response = try await api.fetchResults(sessionId: session.id)
+            guard let token else { return }
+            let response = try await api.fetchResults(token: token, sessionId: session.id)
             results = response.results.map(MatchScore.init(dto:))
         } catch {
         }
@@ -138,7 +192,9 @@ final class SessionDetailViewModel: ObservableObject {
                 scoreB: scoreB
             )
             results.append(MatchScore(dto: response.result))
+            actionError = nil
         } catch {
+            actionError = Self.message(for: error, fallback: "Could not save match result.")
         }
     }
 
@@ -160,23 +216,38 @@ final class SessionDetailViewModel: ObservableObject {
                 rating: rating,
                 comment: comment.isEmpty ? nil : comment
             )
+            actionError = nil
         } catch {
+            actionError = Self.message(for: error, fallback: "Could not submit review.")
         }
     }
 
     // MARK: - Host actions
 
     func cancelSession() async {
+        guard isHost else {
+            actionError = "Only the host can cancel this session."
+            return
+        }
+        let previous = session
         session.isCancelled = true // optimistic
         guard let api, let token else { return }
         do {
             let response = try await api.cancelSession(token: token, sessionId: session.id)
             session = SessionSummary(dto: response.session)
+            actionError = nil
         } catch {
+            session = previous
+            actionError = Self.message(for: error, fallback: "Could not cancel session.")
         }
     }
 
     func applyEdit(_ draft: CreateSessionDraft) async {
+        guard isHost else {
+            actionError = "Only the host can edit this session."
+            return
+        }
+        let previous = session
         let trimmed = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         session.title = trimmed.isEmpty ? draft.venueName : trimmed
         session.venueName = draft.venueName
@@ -197,29 +268,37 @@ final class SessionDetailViewModel: ObservableObject {
                 request: draft.updateRequest
             )
             session = SessionSummary(dto: response.session)
+            actionError = nil
         } catch {
+            session = previous
+            actionError = Self.message(for: error, fallback: "Could not save session changes.")
         }
     }
 
     var myUnpaidAmount: Int? {
+        guard session.costTrackingEnabled else { return nil }
         guard let participant = session.participants.first(where: { $0.player.id == currentPlayer.id }),
               participant.rsvpStatus == .joined, !participant.hasPaid else { return nil }
         return session.perPlayerCostVnd
     }
 
-    // MARK: - Lineup board (mock, local state)
+    // MARK: - Lineup board
 
     func assign(_ player: Player, to court: CourtLineup) async {
+        guard isHost else { return }
+        let previous = session
         session.assign(playerId: player.id, toCourt: court.id) // optimistic
-        await saveLineup()
+        await saveLineup(previous: previous)
     }
 
     func bench(_ player: Player) async {
+        guard isHost else { return }
+        let previous = session
         session.removeFromCourts(playerId: player.id) // optimistic
-        await saveLineup()
+        await saveLineup(previous: previous)
     }
 
-    private func saveLineup() async {
+    private func saveLineup(previous: SessionSummary) async {
         guard let api, let token else { return }
         do {
             let response = try await api.setLineup(
@@ -228,7 +307,10 @@ final class SessionDetailViewModel: ObservableObject {
                 assignments: currentLineupAssignments()
             )
             session = SessionSummary(dto: response.session)
+            actionError = nil
         } catch {
+            session = previous
+            actionError = Self.message(for: error, fallback: "Could not save lineup.")
         }
     }
 
@@ -244,5 +326,12 @@ final class SessionDetailViewModel: ObservableObject {
             }
         }
         return assignments
+    }
+
+    private static func message(for error: Error, fallback: String) -> String {
+        if let apiError = error as? APIErrorResponse {
+            return apiError.error.message
+        }
+        return fallback
     }
 }

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
 import { prisma } from "../src/db/prisma.js";
+import { resetMemoryRateLimits } from "../src/services/rate-limit.js";
 
 export { prisma };
 
@@ -22,6 +23,9 @@ const TABLES = [
   "notifications",
   "notification_preferences",
   "push_devices",
+  "chat_messages",
+  "auth_identities",
+  "refresh_tokens",
   "sessions",
   "group_members",
   "groups",
@@ -29,6 +33,7 @@ const TABLES = [
 ];
 
 export async function resetDb(): Promise<void> {
+  resetMemoryRateLimits();
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${TABLES.map((t) => `"${t}"`).join(", ")} RESTART IDENTITY CASCADE`
   );
@@ -77,8 +82,8 @@ export async function createSession(
     headers: auth(token),
     payload: {
       title: "Session",
-      startsAt: "2026-07-10T12:00:00.000Z",
-      endsAt: "2026-07-10T14:00:00.000Z",
+      startsAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      endsAt: new Date(Date.now() + 50 * 60 * 60 * 1000).toISOString(),
       venueName: "Hoa Lu",
       courtCount: 2,
       ...overrides

@@ -14,25 +14,37 @@ struct LoginView: View {
             VoiColor.background
                 .ignoresSafeArea()
 
-            Button {
-                Task { await signInWithGoogle() }
-            } label: {
-                AsyncImage(url: URL(string: "https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png")) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFit()
-                    } else {
-                        GoogleLogo() // fallback while loading / offline
+            VStack(spacing: VoiSpacing.lg) {
+                Button {
+                    Task { await signInWithGoogle() }
+                } label: {
+                    AsyncImage(url: URL(string: "https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png")) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFit()
+                        } else {
+                            GoogleLogo() // fallback while loading / offline
+                        }
                     }
+                    .frame(width: 40, height: 40)
+                    .frame(width: 84, height: 84)
+                    .background(VoiColor.surface, in: Circle())
+                    .overlay(Circle().stroke(VoiColor.line, lineWidth: 1))
+                    .shadow(color: VoiColor.ink.opacity(0.12), radius: 14, x: 0, y: 6)
                 }
-                .frame(width: 40, height: 40)
-                .frame(width: 84, height: 84)
-                .background(VoiColor.surface, in: Circle())
-                .overlay(Circle().stroke(VoiColor.line, lineWidth: 1))
-                .shadow(color: VoiColor.ink.opacity(0.12), radius: 14, x: 0, y: 6)
+                .buttonStyle(.plain)
+                .disabled(isSigningIn)
+                .accessibilityLabel("Sign in with Google")
+                .accessibilityIdentifier(A11y.Login.google)
+
+                if UITestLaunch.isEnabled {
+                    Button("Sign in for tests") {
+                        Task { await signInForTests() }
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .accessibilityIdentifier(A11y.Login.dev)
+                    .disabled(isSigningIn)
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(isSigningIn)
-            .accessibilityLabel("Sign in with Google")
         }
         .alert("Sign-in failed", isPresented: Binding(
             get: { errorMessage != nil },
@@ -41,6 +53,26 @@ struct LoginView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage ?? "")
+        }
+    }
+
+    private func signInForTests() async {
+        guard !isSigningIn else { return }
+        isSigningIn = true
+        defer { isSigningIn = false }
+        do {
+            let response = try await environment.apiClient.devLogin(
+                email: UITestLaunch.email,
+                displayName: UITestLaunch.displayName
+            )
+            environment.authSession.signIn(response: response)
+            onLogin()
+        } catch {
+            if let apiError = error as? APIErrorResponse {
+                errorMessage = apiError.error.message
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 

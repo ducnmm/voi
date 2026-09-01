@@ -1,6 +1,6 @@
 # Product Requirements
 
-Voi is a polished web-first coordination product for badminton groups. It should be built as a durable product, not a throwaway MVP. A native iOS app is planned as a later channel against the same API.
+Voi is a polished iOS-first coordination product for badminton groups. It should be built as a durable product, not a throwaway MVP. A responsive web companion uses the same API for invite links and fallback access.
 
 ## Product Standard
 
@@ -12,14 +12,14 @@ The product should be production-minded from the start:
 - Strong domain rules on the server.
 - Notification infrastructure designed before any delivery channel (web push, email, or APNs) is wired.
 - Local development and CI workflows.
-- Web architecture that can grow without rewriting the app, sharing contracts with future clients.
+- iOS architecture that can grow without rewriting the app, sharing contracts with the web companion and API.
 
 ## Core Product Areas
 
 ### Identity
 
 - Development email login during early builds.
-- Durable web auth (email magic link or OAuth) before public release; Sign in with Apple arrives with the iOS app.
+- Durable auth before public release; Sign in with Apple is the primary iOS sign-in path.
 - User profile with display name, avatar, and default skill level.
 
 ### Groups
@@ -57,10 +57,10 @@ The product should be production-minded from the start:
 
 ### Notifications
 
-- Notification records are created by the backend and surfaced in-app on the web.
+- Notification records are created by the backend and surfaced in-app on iOS and the web companion.
 - Users can manage reminder and status-change preferences.
-- Mobile push device tokens are registered through the API for the later mobile channel.
-- Delivery (web push, email, or APNs) is a separate worker concern.
+- iOS push device tokens are registered through the API from the primary client.
+- Delivery (APNs first, then web push or email if needed) is a separate worker concern.
 
 ## Release Bar
 
@@ -69,6 +69,5 @@ Before a public beta:
 - API routes must be versioned.
 - All schema changes must be migrations.
 - Core business rules must have tests.
-- The web client must handle loading, empty, success, and error states.
-- Invite, RSVP, waitlist, cancellation, and notification flows must be verified in the browser.
-
+- The iOS client must handle loading, empty, success, and error states.
+- Invite, RSVP, waitlist, cancellation, and notification flows must be verified on iOS; invite fallback must be verified on the web.

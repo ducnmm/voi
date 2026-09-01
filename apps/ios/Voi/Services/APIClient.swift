@@ -1,10 +1,12 @@
 import Foundation
 
-struct APIClient {
+final class APIClient: @unchecked Sendable {
     let baseURL: URL
     let urlSession: URLSession
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    /// Called once on 401 so the client can rotate the access token and retry.
+    var tokenRefresher: (@Sendable () async throws -> String?)?
 
     init(baseURL: URL, urlSession: URLSession = .shared) {
         self.baseURL = baseURL
@@ -73,6 +75,60 @@ struct APIClient {
         )
     }
 
+    func updateProfile(token: String, request: UpdateProfileRequest) async throws -> MeResponse {
+        try await send(
+            APIRequest(
+                method: .patch,
+                path: "me",
+                body: request,
+                token: token
+            )
+        )
+    }
+
+    func fetchNotificationPreferences(token: String) async throws -> NotificationPreferenceResponse {
+        try await send(
+            APIRequest<EmptyBody, NotificationPreferenceResponse>(
+                method: .get,
+                path: "notification-preferences",
+                token: token
+            )
+        )
+    }
+
+    func updateNotificationPreferences(
+        token: String,
+        request: UpdateNotificationPreferenceRequest
+    ) async throws -> NotificationPreferenceResponse {
+        try await send(
+            APIRequest(
+                method: .put,
+                path: "notification-preferences",
+                body: request,
+                token: token
+            )
+        )
+    }
+
+    func resolveInvite(token inviteToken: String) async throws -> InvitePreviewResponse {
+        try await send(
+            APIRequest<EmptyBody, InvitePreviewResponse>(
+                method: .get,
+                path: "invites/\(inviteToken)"
+            )
+        )
+    }
+
+    func acceptInvite(token: String, inviteToken: String) async throws -> AcceptInviteResponse {
+        try await send(
+            APIRequest<EmptyBody, AcceptInviteResponse>(
+                method: .post,
+                path: "invites/\(inviteToken)/accept",
+                token: token
+            )
+        )
+    }
+
     func groups(token: String) async throws -> GroupsResponse {
         try await send(
             APIRequest<EmptyBody, GroupsResponse>(
@@ -104,21 +160,54 @@ struct APIClient {
         )
     }
 
-    func session(id: String) async throws -> SessionResponse {
+    func session(token: String, id: String) async throws -> SessionResponse {
         try await send(
             APIRequest<EmptyBody, SessionResponse>(
                 method: .get,
-                path: "sessions/\(id)"
+                path: "sessions/\(id)",
+                token: token
             )
         )
     }
 
-    func sessionsFeed(token: String) async throws -> SessionsFeedResponse {
-        try await send(
+    /// Session discovery feed. Query params mirror `SessionFeedQuerySchema`.
+    func sessionsFeed(
+        token: String,
+        scope: String = "upcoming",
+        skill: SkillLevel? = nil,
+        venue: String? = nil,
+        availableOnly: Bool = false,
+        savedOnly: Bool = false,
+        sort: String = "date",
+        limit: Int = 50,
+        cursor: String? = nil
+    ) async throws -> SessionsFeedResponse {
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "scope", value: scope),
+            URLQueryItem(name: "sort", value: sort),
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+        if let skill {
+            items.append(URLQueryItem(name: "skill", value: skill.rawValue))
+        }
+        if let venue, !venue.isEmpty {
+            items.append(URLQueryItem(name: "venue", value: venue))
+        }
+        if availableOnly {
+            items.append(URLQueryItem(name: "availableOnly", value: "true"))
+        }
+        if savedOnly {
+            items.append(URLQueryItem(name: "savedOnly", value: "true"))
+        }
+        if let cursor {
+            items.append(URLQueryItem(name: "cursor", value: cursor))
+        }
+        return try await send(
             APIRequest<EmptyBody, SessionsFeedResponse>(
                 method: .get,
                 path: "sessions",
-                token: token
+                token: token,
+                queryItems: items
             )
         )
     }
@@ -203,6 +292,39 @@ struct APIClient {
         )
     }
 
+    func fetchGroupMessages(
+        token: String,
+        groupId: String,
+        limit: Int = 30,
+        before: String? = nil
+    ) async throws -> ChatHistoryResponse {
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+        if let before {
+            items.append(URLQueryItem(name: "before", value: before))
+        }
+        return try await send(
+            APIRequest<EmptyBody, ChatHistoryResponse>(
+                method: .get,
+                path: "groups/\(groupId)/messages",
+                token: token,
+                queryItems: items
+            )
+        )
+    }
+
+    func sendGroupMessage(token: String, groupId: String, body: String) async throws -> ChatSendResponse {
+        try await send(
+            APIRequest(
+                method: .post,
+                path: "groups/\(groupId)/messages",
+                body: SendMessageRequest(body: body),
+                token: token
+            )
+        )
+    }
+
     func checkIn(token: String, sessionId: String, participantId: String) async throws -> SessionResponse {
         try await send(
             APIRequest<EmptyBody, SessionResponse>(
@@ -223,11 +345,12 @@ struct APIClient {
         )
     }
 
-    func fetchResults(sessionId: String) async throws -> ResultsResponse {
+    func fetchResults(token: String, sessionId: String) async throws -> ResultsResponse {
         try await send(
             APIRequest<EmptyBody, ResultsResponse>(
                 method: .get,
-                path: "sessions/\(sessionId)/results"
+                path: "sessions/\(sessionId)/results",
+                token: token
             )
         )
     }
@@ -259,6 +382,18 @@ struct APIClient {
                 method: .post,
                 path: "devices",
                 body: RegisterDeviceRequest(deviceToken: deviceToken, platform: "IOS", appVersion: appVersion),
+                token: token
+            )
+        )
+    }
+
+    @discardableResult
+    func unregisterDevice(token: String, deviceToken: String) async throws -> OkResponse {
+        try await send(
+            APIRequest(
+                method: .post,
+                path: "devices/unregister",
+                body: UnregisterDeviceRequest(deviceToken: deviceToken),
                 token: token
             )
         )
@@ -322,9 +457,13 @@ struct APIClient {
         )
     }
 
-    func fetchUserReviews(userId: String) async throws -> UserReviewsResponse {
+    func fetchUserReviews(token: String, userId: String) async throws -> UserReviewsResponse {
         try await send(
-            APIRequest<EmptyBody, UserReviewsResponse>(method: .get, path: "users/\(userId)/reviews")
+            APIRequest<EmptyBody, UserReviewsResponse>(
+                method: .get,
+                path: "users/\(userId)/reviews",
+                token: token
+            )
         )
     }
 
@@ -385,10 +524,66 @@ struct APIClient {
         return try decoder.decode(UploadResponse.self, from: respData)
     }
 
+    func markNotificationRead(token: String, id: String) async throws -> OkResponse {
+        try await send(
+            APIRequest<EmptyBody, OkResponse>(
+                method: .post,
+                path: "notifications/\(id)/read",
+                token: token
+            )
+        )
+    }
+
+    func markAllNotificationsRead(token: String) async throws -> OkResponse {
+        try await send(
+            APIRequest<EmptyBody, OkResponse>(
+                method: .post,
+                path: "notifications/read-all",
+                token: token
+            )
+        )
+    }
+
+    func deleteAccount(token: String) async throws -> OkResponse {
+        try await send(
+            APIRequest<EmptyBody, OkResponse>(
+                method: .delete,
+                path: "me",
+                token: token
+            )
+        )
+    }
+
     func send<Body: Encodable, Response: Decodable>(
         _ request: APIRequest<Body, Response>
     ) async throws -> Response {
-        let url = baseURL.appending(path: request.path)
+        do {
+            return try await sendOnce(request)
+        } catch {
+            guard isUnauthorized(error),
+                  request.token != nil,
+                  let refresher = tokenRefresher,
+                  let newToken = try await refresher() else {
+                throw error
+            }
+            return try await sendOnce(request.authenticated(with: newToken))
+        }
+    }
+
+    private func sendOnce<Body: Encodable, Response: Decodable>(
+        _ request: APIRequest<Body, Response>
+    ) async throws -> Response {
+        var components = URLComponents(
+            url: baseURL.appending(path: request.path),
+            resolvingAgainstBaseURL: false
+        )
+        if !request.queryItems.isEmpty {
+            components?.queryItems = request.queryItems
+        }
+        guard let url = components?.url else {
+            throw APIError.requestFailed
+        }
+
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.method.rawValue
         urlRequest.setValue("application/json", forHTTPHeaderField: "accept")
@@ -406,6 +601,9 @@ struct APIClient {
 
         guard let httpResponse = response as? HTTPURLResponse,
               (200..<300).contains(httpResponse.statusCode) else {
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 401 {
+                throw APIError.unauthorized
+            }
             if let apiError = try? decoder.decode(APIErrorResponse.self, from: data) {
                 throw apiError
             }
@@ -414,13 +612,25 @@ struct APIClient {
 
         return try decoder.decode(Response.self, from: data)
     }
+
+    private func isUnauthorized(_ error: Error) -> Bool {
+        if case APIError.unauthorized = error { return true }
+        if let apiError = error as? APIErrorResponse, apiError.error.code == "UNAUTHORIZED" {
+            return true
+        }
+        return false
+    }
 }
 
 extension APIClient {
+    /// Default local API from `docker-compose` / `pnpm dev` (`API_PORT=43187`).
+    /// Override with the `VOI_API_BASE_URL` environment variable when needed
+    /// (e.g. `http://localhost:43197/v1` on a machine where 43187 is taken).
     static let development = APIClient(
-        // Local dev runs on 43197 on this machine (43187 is taken by another
-        // project). On a clean machine the committed compose uses 43187.
-        baseURL: URL(string: "http://localhost:43197/v1")!
+        baseURL: URL(
+            string: ProcessInfo.processInfo.environment["VOI_API_BASE_URL"]
+                ?? "http://localhost:43187/v1"
+        )!
     )
 }
 
@@ -431,4 +641,5 @@ struct HealthResponse: Codable {
 
 enum APIError: Error {
     case requestFailed
+    case unauthorized
 }

@@ -13,6 +13,7 @@ struct AddScoreView: View {
             Form {
                 Section("Match") {
                     TextField("Label", text: $label)
+                        .accessibilityIdentifier(A11y.Score.label)
                 }
                 Section("Score") {
                     Stepper("Team A: \(scoreA)", value: $scoreA, in: 0...30)
@@ -24,12 +25,14 @@ struct AddScoreView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityIdentifier(A11y.Score.cancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         onAdd(label.trimmingCharacters(in: .whitespacesAndNewlines), scoreA, scoreB)
                         dismiss()
                     }
+                    .accessibilityIdentifier(A11y.Score.save)
                 }
             }
         }

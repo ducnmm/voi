@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// Group chat for a single session: history over REST, live over WebSocket.
+/// History over REST, live over WebSocket. Same UI for a session or a group.
 struct ChatView: View {
-    let sessionId: String
-    let sessionTitle: String
+    let room: ChatRoom
     @EnvironmentObject private var environment: AppEnvironment
     @StateObject private var viewModel = ChatViewModel()
     @State private var draft = ""
@@ -30,14 +29,15 @@ struct ChatView: View {
             inputBar
         }
         .background(VoiColor.background)
-        .navigationTitle(sessionTitle)
+        .accessibilityIdentifier(A11y.Chat.screen)
+        .navigationTitle(room.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .task {
             viewModel.configure(
                 api: environment.apiClient,
                 authSession: environment.authSession,
-                sessionId: sessionId
+                room: room
             )
             await viewModel.start()
         }
@@ -53,17 +53,23 @@ struct ChatView: View {
                 .padding(.vertical, VoiSpacing.md)
                 .background(VoiColor.surface, in: Capsule())
                 .overlay(Capsule().stroke(VoiColor.line, lineWidth: 1))
+                .accessibilityIdentifier(A11y.Chat.input)
 
             Button {
                 let text = draft
-                draft = ""
-                Task { await viewModel.send(text) }
+                Task {
+                    let sent = await viewModel.send(text)
+                    if sent {
+                        draft = ""
+                    }
+                }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 40))
                     .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty ? VoiColor.muted : VoiColor.court)
             }
-            .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+            .accessibilityIdentifier(A11y.Chat.send)
+            .accessibilityLabel("Send")
         }
         .padding(.horizontal, VoiSpacing.lg)
         .padding(.vertical, VoiSpacing.md)
@@ -93,7 +99,7 @@ private struct ChatBubble: View {
                     .padding(.horizontal, VoiSpacing.md)
                     .padding(.vertical, 10)
                     .background(isMine ? VoiColor.court : VoiColor.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: VoiRadius.message, style: .continuous))
             }
             if !isMine { Spacer(minLength: 40) }
         }

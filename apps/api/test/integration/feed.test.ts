@@ -97,28 +97,29 @@ describe("GET /v1/sessions feed", () => {
     expect(s.summary.perPlayerCostVnd).toBe(80000);
   });
 
-  it("auto split is null with no joined players", async () => {
+  it("auto split divides by the host who is auto-joined", async () => {
     const host = await devLogin(app, "feed_split@voi.test");
     const gid = await createGroup(app, host.token);
     await createSession(app, host.token, gid, {
       feeTotalVnd: 240000,
       shuttlecockCostVnd: 60000
     });
-    expect((await feed(host.token)).sessions[0].summary.perPlayerCostVnd).toBeNull();
+    expect((await feed(host.token)).sessions[0].summary.perPlayerCostVnd).toBe(300000);
   });
 
-  it("sorts by price (cheapest first, null last)", async () => {
+  it("sorts by price (cheapest first)", async () => {
     const host = await devLogin(app, "feed_price@voi.test");
     const gid = await createGroup(app, host.token);
     await createSession(app, host.token, gid, { title: "Cheap", feePerPlayerVnd: 50000 });
     await createSession(app, host.token, gid, { title: "Pricey", feePerPlayerVnd: 90000 });
-    await createSession(app, host.token, gid, { title: "Free" });
+    await createSession(app, host.token, gid, { title: "Free", feePerPlayerVnd: 0 });
 
     const titles = (await feed(host.token, "?sort=price")).sessions.map(
       (s: any) => s.title
     );
-    expect(titles[0]).toBe("Cheap");
-    expect(titles[titles.length - 1]).toBe("Free");
+    expect(titles[0]).toBe("Free");
+    expect(titles[1]).toBe("Cheap");
+    expect(titles[2]).toBe("Pricey");
   });
 
   it("sorts by spots (most open first)", async () => {
@@ -175,11 +176,14 @@ describe("GET /v1/sessions feed", () => {
   it("keyset paginates without overlap", async () => {
     const host = await devLogin(app, "feed_page@voi.test");
     const gid = await createGroup(app, host.token);
-    for (const day of ["2026-07-10", "2026-07-11", "2026-07-12"]) {
+    const origin = Date.now() + 3 * 24 * 60 * 60 * 1000;
+    for (let i = 0; i < 3; i += 1) {
+      const starts = new Date(origin + i * 24 * 60 * 60 * 1000);
+      const ends = new Date(starts.getTime() + 2 * 60 * 60 * 1000);
       await createSession(app, host.token, gid, {
-        title: day,
-        startsAt: `${day}T12:00:00.000Z`,
-        endsAt: `${day}T14:00:00.000Z`
+        title: `Day ${i}`,
+        startsAt: starts.toISOString(),
+        endsAt: ends.toISOString()
       });
     }
 

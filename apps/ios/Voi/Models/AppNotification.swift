@@ -35,6 +35,7 @@ struct AppNotification: Identifiable, Hashable {
     let message: String
     let createdAt: Date
     var isRead: Bool
+    var sessionId: String? = nil
 
     var relativeTime: String {
         let formatter = RelativeDateTimeFormatter()

@@ -1,8 +1,12 @@
 import type { Prisma } from "@prisma/client";
-import { presentUserSummary } from "./user-presenter.js";
+import { presentUserSummary, userSummarySelect } from "./user-presenter.js";
+
+export const chatAuthorInclude = {
+  author: { select: userSummarySelect }
+} as const;
 
 type ChatMessageWithAuthor = Prisma.ChatMessageGetPayload<{
-  include: { author: true };
+  include: typeof chatAuthorInclude;
 }>;
 
 export function presentChatMessage(message: ChatMessageWithAuthor) {

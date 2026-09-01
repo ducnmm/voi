@@ -84,8 +84,21 @@ describe("reviews", () => {
     });
     expect(r2.statusCode).toBe(201);
 
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: `/v1/users/${b.userId}/reviews`
+        })
+      ).statusCode
+    ).toBe(401);
+
     const list = (
-      await app.inject({ method: "GET", url: `/v1/users/${b.userId}/reviews` })
+      await app.inject({
+        method: "GET",
+        url: `/v1/users/${b.userId}/reviews`,
+        headers: auth(a.token)
+      })
     ).json().reviews;
     expect(list.length).toBe(1);
     expect(list[0].rating).toBe(5);

@@ -42,15 +42,73 @@ export const sessionInclude = Prisma.validator<Prisma.SessionInclude>()({
   }
 });
 
+/** Feed cards: group + invite token + RSVP counts. No lineup or participant users. */
+export const sessionFeedInclude = Prisma.validator<Prisma.SessionInclude>()({
+  group: { select: { id: true, name: true } },
+  participants: { select: { rsvpStatus: true } }
+});
+
 export type SessionWithDetails = Prisma.SessionGetPayload<{
   include: typeof sessionInclude;
 }>;
 
-export function presentSession(session: SessionWithDetails) {
+export type SessionFeedRow = Prisma.SessionGetPayload<{
+  include: typeof sessionFeedInclude;
+}>;
+
+function presentSessionCounts(session: {
+  maxPlayers: number;
+  feeTotalVnd: number | null;
+  shuttlecockCostVnd: number | null;
+  feePerPlayerVnd: number | null;
+  participants: { rsvpStatus: string }[];
+}) {
   const joinedPlayerCount = session.participants.filter(
     (participant) => participant.rsvpStatus === "JOINED"
   ).length;
 
+  return {
+    joinedPlayerCount,
+    waitlistCount: session.participants.filter(
+      (participant) => participant.rsvpStatus === "WAITLISTED"
+    ).length,
+    availableSlots: Math.max(session.maxPlayers - joinedPlayerCount, 0),
+    totalCostVnd: calculateTotalCostVnd({ ...session, joinedPlayerCount }),
+    perPlayerCostVnd: calculatePerPlayerCostVnd({
+      ...session,
+      joinedPlayerCount
+    })
+  };
+}
+
+function presentSessionCore(session: {
+  id: string;
+  groupId: string;
+  hostUserId: string;
+  title: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  venueName: string;
+  venueNote: string | null;
+  courtCount: number;
+  maxPlayers: number;
+  feeTotalVnd: number | null;
+  shuttlecockCostVnd: number | null;
+  currency: string;
+  skillLevel: SessionFeedRow["skillLevel"];
+  visibility: SessionFeedRow["visibility"];
+  costTrackingEnabled: boolean;
+  feePerPlayerVnd: number | null;
+  venueLat: number | null;
+  venueLng: number | null;
+  imageUrls: string[];
+  status: SessionFeedRow["status"];
+  createdAt: Date;
+  updatedAt: Date;
+  group: { id: string; name: string };
+  invites?: { token: string }[];
+  participants: { rsvpStatus: string }[];
+}) {
   return {
     id: session.id,
     groupId: session.groupId,
@@ -79,19 +137,18 @@ export function presentSession(session: SessionWithDetails) {
       id: session.group.id,
       name: session.group.name
     },
-    inviteUrlToken: session.invites[0]?.token ?? null,
-    summary: {
-      joinedPlayerCount,
-      waitlistCount: session.participants.filter(
-        (participant) => participant.rsvpStatus === "WAITLISTED"
-      ).length,
-      availableSlots: Math.max(session.maxPlayers - joinedPlayerCount, 0),
-      totalCostVnd: calculateTotalCostVnd({ ...session, joinedPlayerCount }),
-      perPlayerCostVnd: calculatePerPlayerCostVnd({
-        ...session,
-        joinedPlayerCount
-      })
-    },
+    inviteUrlToken: session.invites?.[0]?.token ?? null,
+    summary: presentSessionCounts(session)
+  };
+}
+
+export function presentSessionCard(session: SessionFeedRow) {
+  return presentSessionCore(session);
+}
+
+export function presentSession(session: SessionWithDetails) {
+  return {
+    ...presentSessionCore(session),
     participants: session.participants.map((participant) => ({
       id: participant.id,
       userId: participant.userId,

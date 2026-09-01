@@ -2,9 +2,18 @@ export interface ChatSocket {
   send(data: string): void;
 }
 
+export function sessionChatRoom(sessionId: string): string {
+  return `session:${sessionId}`;
+}
+
+export function groupChatRoom(groupId: string): string {
+  return `group:${groupId}`;
+}
+
 /**
- * In-memory registry of WebSocket connections per session "room". Single-process
- * only; a multi-instance deployment needs Redis pub/sub fan-out in front of this.
+ * In-memory registry of WebSocket connections per chat room (`session:{id}` /
+ * `group:{id}`). Single-process only; a multi-instance deployment needs Redis
+ * pub/sub fan-out in front of this.
  */
 export class ChatHub {
   private rooms = new Map<string, Set<ChatSocket>>();

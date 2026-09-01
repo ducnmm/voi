@@ -9,7 +9,13 @@ import { ALLOWED_IMAGE_EXT, MAX_UPLOAD_BYTES, UPLOADS_DIR } from "../config/uplo
 
 export async function uploadRoutes(app: FastifyInstance): Promise<void> {
   // Upload a single image; returns an absolute URL served from `/uploads/`.
-  app.post("/uploads", { preHandler: app.authenticate }, async (request, reply) => {
+  app.post(
+    "/uploads",
+    {
+      preHandler: app.authenticate,
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } }
+    },
+    async (request, reply) => {
     const file = await request.file({ limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 } });
     if (!file) {
       throw badRequest("No file uploaded");

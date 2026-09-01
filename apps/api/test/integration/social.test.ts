@@ -76,11 +76,11 @@ describe("saved sessions", () => {
       (await app.inject({ method: "PUT", url: `/v1/sessions/${session.id}/save`, headers: auth(host.token) })).statusCode
     ).toBe(200);
 
-    expect(
-      (await app.inject({ method: "GET", url: "/v1/me/saved", headers: auth(host.token) })).json().sessions.map(
-        (s: any) => s.title
-      )
-    ).toEqual(["Save me"]);
+    const saved = (
+      await app.inject({ method: "GET", url: "/v1/me/saved", headers: auth(host.token) })
+    ).json().sessions;
+    expect(saved.map((s: { title: string }) => s.title)).toEqual(["Save me"]);
+    expect(saved[0].participants).toBeUndefined();
     expect(
       (await app.inject({ method: "GET", url: "/v1/sessions?savedOnly=true", headers: auth(host.token) })).json().sessions.length
     ).toBe(1);
@@ -89,5 +89,29 @@ describe("saved sessions", () => {
     expect(
       (await app.inject({ method: "GET", url: "/v1/sessions?savedOnly=true", headers: auth(host.token) })).json().sessions.length
     ).toBe(0);
+  });
+
+  it("does not let outsiders bookmark a GROUP_ONLY session", async () => {
+    const host = await devLogin(app, "sav_go_host@voi.test");
+    const gid = await createGroup(app, host.token);
+    const session = await createSession(app, host.token, gid, {
+      title: "Private",
+      visibility: "GROUP_ONLY"
+    });
+    const outsider = await devLogin(app, "sav_go_out@voi.test");
+
+    expect(
+      (
+        await app.inject({
+          method: "PUT",
+          url: `/v1/sessions/${session.id}/save`,
+          headers: auth(outsider.token)
+        })
+      ).statusCode
+    ).toBe(403);
+    expect(
+      (await app.inject({ method: "GET", url: "/v1/me/saved", headers: auth(outsider.token) }))
+        .json().sessions
+    ).toEqual([]);
   });
 });

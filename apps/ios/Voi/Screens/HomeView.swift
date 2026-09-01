@@ -81,50 +81,59 @@ final class HomeViewModel: ObservableObject {
 
             activeGroup = try await ensureGroup(token: token)
 
-            // Use the discovery feed (Spec 0007) for the Sessions list.
-            let feed = try await apiClient.sessionsFeed(token: token)
+            // Discovery feed (Spec 0007). Past history uses scope=past.
+            let feed = try await apiClient.sessionsFeed(
+                token: token,
+                scope: showPast ? "past" : "upcoming",
+                skill: filter.skillLevels.count == 1 ? filter.skillLevels.first : nil,
+                availableOnly: filter.availableOnly,
+                savedOnly: savedOnly,
+                sort: sortOrder.rawValue
+            )
             sessions = feed.sessions
                 .map { SessionSummary(dto: $0) }
                 .sorted { $0.startsAt < $1.startsAt }
             errorMessage = nil
         } catch {
-            // Offline/demo fallback so the prototype stays usable without a backend.
-            if sessions.isEmpty {
-                sessions = Mock.sessions
-            }
-            apiStatus = "Demo"
-            errorMessage = nil
+            apiStatus = "Offline"
+            errorMessage = message(for: error)
         }
     }
 
-    func createSession(_ draft: CreateSessionDraft) async throws {
+    @discardableResult
+    func createSession(_ draft: CreateSessionDraft) async throws -> SessionSummary {
+        if activeGroup == nil || authSession.token == nil {
+            await reload()
+        }
+
+        guard let token = authSession.token, let group = activeGroup else {
+            throw LocalAppError.missingSession
+        }
+
         do {
-            if activeGroup == nil || authSession.token == nil {
-                await reload()
-            }
-
-            guard let token = authSession.token, let group = activeGroup else {
-                throw LocalAppError.missingSession
-            }
-
             let response = try await apiClient.createSession(
                 token: token,
                 groupId: group.id,
                 request: draft.request
             )
-            var summary = SessionSummary(dto: response.session, inviteUrl: response.inviteUrl)
-            summary.fixedPricePerPlayerVnd = draft.fixedPricePerPlayerVnd
+            let summary = SessionSummary(dto: response.session, inviteUrl: response.inviteUrl)
             upsert(summary)
-        } catch {
-            // Offline/demo fallback: keep the create flow working locally.
-            upsert(makeLocalSession(from: draft))
-        }
 
-        // Mock recurring: spin up the next few weekly occurrences locally.
-        if draft.repeatsWeekly {
-            for week in 1...3 {
-                upsert(makeLocalSession(from: draft, weekOffset: week))
+            if draft.repeatsWeekly {
+                for week in 1...3 {
+                    let copy = draft.shifted(byWeeks: week)
+                    let extra = try await apiClient.createSession(
+                        token: token,
+                        groupId: group.id,
+                        request: copy.request
+                    )
+                    upsert(SessionSummary(dto: extra.session, inviteUrl: extra.inviteUrl))
+                }
             }
+            return summary
+        } catch {
+            errorMessage = message(for: error)
+            throw error
         }
     }
 
@@ -143,6 +152,7 @@ final class HomeViewModel: ObservableObject {
         }
         return SessionSummary(
             id: id,
+            hostUserId: authSession.currentPlayer.id,
             title: draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? draft.venueName : draft.title,
             startsAt: draft.startsAt.addingTimeInterval(offset),
             endsAt: draft.endsAt.addingTimeInterval(offset),
@@ -161,10 +171,12 @@ final class HomeViewModel: ObservableObject {
 
     private func ensureSignedIn() async throws {
         guard !authSession.isAuthenticated else { return }
-
+        guard UITestLaunch.isEnabled else {
+            throw LocalAppError.missingSession
+        }
         let response = try await apiClient.devLogin(
-            email: "host@example.com",
-            displayName: "Host"
+            email: UITestLaunch.email,
+            displayName: UITestLaunch.displayName
         )
         authSession.signIn(response: response)
     }
@@ -220,6 +232,7 @@ struct HomeView: View {
     @State private var screenWidth: CGFloat = 0
     @State private var showingFilter = false
     @State private var showingMap = false
+    @State private var isCreatingSession = false
 
     var body: some View {
         NavigationStack {
@@ -258,6 +271,21 @@ struct HomeView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Hosts") { peopleSheet = .hosts }
+                        .accessibilityIdentifier(A11y.Home.hosts)
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Players") { peopleSheet = .players }
+                        .accessibilityIdentifier(A11y.Home.players)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { isCreatingSession = true } label: {
+                        Image(systemName: "plus.circle.fill")
+                    }
+                    .accessibilityLabel("Create event")
+                    .accessibilityIdentifier(A11y.Home.create)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingFilter = true } label: {
                         Image(systemName: viewModel.filter.isActive
@@ -265,12 +293,14 @@ struct HomeView: View {
                             : "line.3.horizontal.decrease.circle")
                     }
                     .accessibilityLabel("Filter")
+                    .accessibilityIdentifier(A11y.Home.filter)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingMap = true } label: {
                         Image(systemName: "map")
                     }
                     .accessibilityLabel("Map")
+                    .accessibilityIdentifier(A11y.Home.map)
                 }
             }
             .task {
@@ -288,6 +318,11 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showingMap) {
                 MapBrowseView(sessions: viewModel.upcomingSessions)
+            }
+            .sheet(isPresented: $isCreatingSession) {
+                CreateSessionView(groupName: viewModel.activeGroupName) { draft in
+                    try await viewModel.createSession(draft)
+                }
             }
             .alert(
                 "Voi API",
@@ -423,6 +458,8 @@ struct SessionListContent: View {
                 SessionCard(session: session)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(A11y.Home.card(session.id))
+            .accessibilityLabel(session.title)
         }
     }
 }
@@ -498,8 +535,6 @@ private struct SessionCardShell<Content: View>: View {
     var showsPhotoCount: Bool = false
     @ViewBuilder let content: () -> Content
 
-    private let cornerRadius: CGFloat = 12
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .topTrailing) {
@@ -524,13 +559,13 @@ private struct SessionCardShell<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(VoiColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous)
                 .stroke(VoiColor.line, lineWidth: 1)
         )
         .shadow(color: VoiColor.ink.opacity(0.06), radius: 8, x: 0, y: 2)
-        .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous))
     }
 }
 
@@ -632,12 +667,12 @@ private struct FilterSummaryBar: View {
         .padding(.vertical, VoiSpacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(VoiColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous)
                 .stroke(VoiColor.line, lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: VoiRadius.card, style: .continuous))
     }
 
     private var chipLabels: [String] {
@@ -685,8 +720,17 @@ struct SessionFilterView: View {
         NavigationStack {
             List {
                 Section("Show") {
-                    row(title: "Upcoming", isOn: !viewModel.showPast) { viewModel.showPast = false }
-                    row(title: "Past", isOn: viewModel.showPast) { viewModel.showPast = true }
+                    row(title: "Upcoming", isOn: !viewModel.showPast, identifier: A11y.Filter.upcoming) { viewModel.showPast = false }
+                    row(title: "Past", isOn: viewModel.showPast, identifier: A11y.Filter.past) { viewModel.showPast = true }
+                }
+
+                Section("Availability") {
+                    Toggle("Only show available", isOn: $viewModel.filter.availableOnly)
+                        .tint(VoiColor.court)
+                        .accessibilityIdentifier(A11y.Filter.available)
+                    Toggle("Saved only", isOn: $viewModel.savedOnly)
+                        .tint(VoiColor.court)
+                        .accessibilityIdentifier(A11y.Filter.saved)
                 }
 
                 Section("Skill level") {
@@ -716,13 +760,6 @@ struct SessionFilterView: View {
                     .pickerStyle(.menu)
                 }
 
-                Section("Availability") {
-                    Toggle("Only show available", isOn: $viewModel.filter.availableOnly)
-                        .tint(VoiColor.court)
-                    Toggle("Saved only", isOn: $viewModel.savedOnly)
-                        .tint(VoiColor.court)
-                }
-
                 if viewModel.filter.isActive || !viewModel.searchText.isEmpty || viewModel.savedOnly {
                     Section {
                         Button("Clear filters", role: .destructive) {
@@ -730,6 +767,7 @@ struct SessionFilterView: View {
                             viewModel.searchText = ""
                             viewModel.savedOnly = false
                         }
+                        .accessibilityIdentifier(A11y.Filter.clear)
                     }
                 }
             }
@@ -737,13 +775,22 @@ struct SessionFilterView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") {
+                        Task {
+                            await viewModel.reload()
+                            dismiss()
+                        }
+                    }
+                    .accessibilityIdentifier(A11y.Filter.done)
                 }
+            }
+            .onDisappear {
+                Task { await viewModel.reload() }
             }
         }
     }
 
-    private func row(title: String, isOn: Bool, toggle: @escaping () -> Void) -> some View {
+    private func row(title: String, isOn: Bool, identifier: String? = nil, toggle: @escaping () -> Void) -> some View {
         Button(action: toggle) {
             HStack {
                 Text(LocalizedStringKey(title))
@@ -756,6 +803,7 @@ struct SessionFilterView: View {
                 }
             }
         }
+        .accessibilityIdentifier(identifier ?? "filter.row.\(title)")
     }
 
     private func toggleSkill(_ level: SkillLevel) {

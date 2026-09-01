@@ -29,6 +29,12 @@
 				<string>com.googleusercontent.apps.291960099224-n1tslm0u0rfvjb35is8lgvb0rbrc014r</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>voi</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
@@ -45,8 +51,15 @@
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
 			</dict>
+			<key>127.0.0.1</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
 		</dict>
 	</dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach photos when creating a session.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Add badminton sessions to your calendar.</string>
 	<key>NSCalendarsUsageDescription</key>

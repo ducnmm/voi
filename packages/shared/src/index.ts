@@ -147,6 +147,10 @@ export const RegisterPushDeviceSchema = z.object({
   appVersion: z.string().trim().max(40).optional()
 });
 
+export const UnregisterPushDeviceSchema = z.object({
+  deviceToken: z.string().trim().min(16).max(512)
+});
+
 export const UpdateNotificationPreferenceSchema = z.object({
   remindersEnabled: z.boolean().optional(),
   statusChangesEnabled: z.boolean().optional(),

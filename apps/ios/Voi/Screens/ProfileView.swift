@@ -4,10 +4,13 @@ struct ProfileView: View {
     @ObservedObject var authSession: AuthSession
     @ObservedObject var sessionsViewModel: HomeViewModel
     let onSignOut: () -> Void
+    @EnvironmentObject private var environment: AppEnvironment
 
     @State private var displayName: String = ""
     @State private var skillLevel: SkillLevel = .intermediate
     @State private var didSave = false
+    @State private var saveMessage = ""
+    @State private var isSaving = false
     @State private var isCreatingSession = false
 
     var body: some View {
@@ -41,16 +44,19 @@ struct ProfileView: View {
                     } label: {
                         Label("Create event", systemImage: "plus.circle.fill")
                     }
+                    .accessibilityIdentifier(A11y.Profile.createEvent)
 
                     NavigationLink {
                         ManageEventsView(viewModel: sessionsViewModel)
                     } label: {
                         Label("Manage events", systemImage: "slider.horizontal.3")
                     }
+                    .accessibilityIdentifier(A11y.Profile.manageEvents)
                 }
 
                 Section("Profile") {
                     TextField("Display name", text: $displayName)
+                        .accessibilityIdentifier(A11y.Profile.displayName)
                     Picker("Default skill", selection: $skillLevel) {
                         ForEach(SkillLevel.allCases) { level in
                             Text(LocalizedStringKey(level.label)).tag(level)
@@ -59,11 +65,17 @@ struct ProfileView: View {
                 }
 
                 Section {
-                    Button("Save changes") {
-                        authSession.updateProfile(displayName: trimmedName, skillLevel: skillLevel)
-                        didSave = true
+                    Button {
+                        Task { await saveProfile() }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Text("Save changes")
+                        }
                     }
-                    .disabled(trimmedName.isEmpty)
+                    .disabled(trimmedName.isEmpty || isSaving)
+                    .accessibilityIdentifier(A11y.Profile.save)
                 }
 
                 Section {
@@ -72,6 +84,7 @@ struct ProfileView: View {
                     } label: {
                         Label("Settings", systemImage: "gearshape")
                     }
+                    .accessibilityIdentifier(A11y.Profile.settings)
                 }
             }
             .navigationTitle("Profile")
@@ -81,11 +94,30 @@ struct ProfileView: View {
                     try await sessionsViewModel.createSession(draft)
                 }
             }
-            .alert("Profile saved", isPresented: $didSave) {
+            .alert("Profile", isPresented: $didSave) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Your changes were saved locally.")
+                Text(saveMessage)
             }
+        }
+    }
+
+    private func saveProfile() async {
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            _ = try await authSession.updateProfile(
+                displayName: trimmedName,
+                skillLevel: skillLevel,
+                using: environment.apiClient
+            )
+            saveMessage = "Your profile was saved."
+            didSave = true
+        } catch {
+            // Offline fallback so the form still feels responsive.
+            authSession.updateProfileLocally(displayName: trimmedName, skillLevel: skillLevel)
+            saveMessage = "Saved on this device. Could not reach the server."
+            didSave = true
         }
     }
 

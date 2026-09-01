@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 
 enum SkillLevel: String, Codable, CaseIterable, Identifiable {
@@ -86,6 +87,9 @@ struct CourtLineup: Identifiable, Hashable {
 
 struct SessionSummary: Identifiable, Hashable {
     let id: String
+    var groupId: String? = nil
+    /// Server host user id — used for host-only UI gates.
+    var hostUserId: String = ""
     var title: String
     var startsAt: Date
     var endsAt: Date
@@ -98,8 +102,15 @@ struct SessionSummary: Identifiable, Hashable {
     /// When set, every player pays this fixed amount (host-set price); otherwise
     /// the cost is split from the court + shuttlecock total.
     var fixedPricePerPlayerVnd: Int? = nil
+    /// When false, hide payment tracking UI (server `costTrackingEnabled`).
+    var costTrackingEnabled: Bool = true
+    var venueLat: Double? = nil
+    var venueLng: Double? = nil
     var courts: [CourtLineup]
     var participants: [Participant]
+    /// Feed/invite payloads omit participant rows; counts then come from the server summary.
+    var listedJoinedPlayerCount: Int? = nil
+    var listedWaitlistCount: Int? = nil
     var inviteUrl: String?
     /// Event photos. When empty, `photos` falls back to deterministic mock images.
     var imageUrls: [URL] = []
@@ -130,7 +141,12 @@ extension SessionSummary {
         participants.filter { $0.rsvpStatus == .joined }
     }
 
-    var joinedPlayerCount: Int { joinedParticipants.count }
+    var joinedPlayerCount: Int {
+        if participants.isEmpty, let listedJoinedPlayerCount {
+            return listedJoinedPlayerCount
+        }
+        return joinedParticipants.count
+    }
 
     var waitlist: [Participant] {
         participants
@@ -138,7 +154,12 @@ extension SessionSummary {
             .sorted { ($0.waitlistPosition ?? .max) < ($1.waitlistPosition ?? .max) }
     }
 
-    var waitlistCount: Int { waitlist.count }
+    var waitlistCount: Int {
+        if participants.isEmpty, let listedWaitlistCount {
+            return listedWaitlistCount
+        }
+        return waitlist.count
+    }
 
     var paidCount: Int { joinedParticipants.filter { $0.hasPaid }.count }
 
@@ -157,13 +178,24 @@ extension SessionSummary {
     }
 
     var totalCostVnd: Int {
-        (feeTotalVnd ?? 0) + (shuttlecockCostVnd ?? 0)
+        if let fixedPricePerPlayerVnd {
+            return fixedPricePerPlayerVnd * joinedPlayerCount
+        }
+        return (feeTotalVnd ?? 0) + (shuttlecockCostVnd ?? 0)
     }
 
     var perPlayerCostVnd: Int? {
         if let fixedPricePerPlayerVnd { return fixedPricePerPlayerVnd }
         guard joinedPlayerCount > 0 else { return nil }
         return Int(ceil(Double(totalCostVnd) / Double(joinedPlayerCount)))
+    }
+
+    /// Map pin for the venue. Prefers server lat/lng; falls back to mock coords.
+    var mapCoordinate: CLLocationCoordinate2D {
+        if let venueLat, let venueLng {
+            return CLLocationCoordinate2D(latitude: venueLat, longitude: venueLng)
+        }
+        return Mock.venueCoordinate(venueName)
     }
 }
 
@@ -379,12 +411,14 @@ extension SessionSummary {
 
 extension SessionSummary {
     init(dto: SessionDTO, inviteUrl: String? = nil) {
-        let mappedParticipants = dto.participants.map(Participant.init(dto:))
+        let mappedParticipants = (dto.participants ?? []).map(Participant.init(dto:))
         let playersByParticipantId = Dictionary(
             uniqueKeysWithValues: mappedParticipants.map { ($0.id, $0.player) }
         )
 
         id = dto.id
+        groupId = dto.groupId
+        hostUserId = dto.hostUserId
         title = dto.title?.isEmpty == false ? dto.title! : dto.venueName
         startsAt = APIDateFormatter.date(from: dto.startsAt)
         endsAt = APIDateFormatter.date(from: dto.endsAt)
@@ -394,8 +428,15 @@ extension SessionSummary {
         skillLevel = dto.skillLevel
         feeTotalVnd = dto.feeTotalVnd
         shuttlecockCostVnd = dto.shuttlecockCostVnd
+        // Fixed price from server; prefer explicit feePerPlayerVnd over recomputing.
+        fixedPricePerPlayerVnd = dto.feePerPlayerVnd
+        costTrackingEnabled = dto.costTrackingEnabled ?? true
+        venueLat = dto.venueLat
+        venueLng = dto.venueLng
         participants = mappedParticipants
-        courts = dto.courts
+        listedJoinedPlayerCount = dto.summary.joinedPlayerCount
+        listedWaitlistCount = dto.summary.waitlistCount
+        courts = (dto.courts ?? [])
             .sorted { $0.sortOrder < $1.sortOrder }
             .map { court in
                 CourtLineup(
@@ -416,6 +457,7 @@ extension SessionSummary {
             }
         self.inviteUrl = inviteUrl ?? dto.inviteUrlToken.map { "voi://invites/\($0)" }
         imageUrls = dto.imageUrls ?? []
+        isCancelled = dto.status == "CANCELLED"
     }
 }
 
@@ -451,8 +493,27 @@ struct CreateSessionDraft {
     var repeatsWeekly: Bool = false
     var imageUrls: [String] = []
 
+    func shifted(byWeeks weeks: Int) -> CreateSessionDraft {
+        let offset = TimeInterval(weeks * 7 * 24 * 60 * 60)
+        return CreateSessionDraft(
+            title: title,
+            venueName: venueName,
+            startsAt: startsAt.addingTimeInterval(offset),
+            endsAt: endsAt.addingTimeInterval(offset),
+            courtCount: courtCount,
+            maxPlayers: maxPlayers,
+            feeTotalVnd: feeTotalVnd,
+            shuttlecockCostVnd: shuttlecockCostVnd,
+            skillLevel: skillLevel,
+            fixedPricePerPlayerVnd: fixedPricePerPlayerVnd,
+            repeatsWeekly: false,
+            imageUrls: imageUrls
+        )
+    }
+
     var request: CreateSessionRequest {
-        CreateSessionRequest(
+        let fixed = fixedPricePerPlayerVnd
+        return CreateSessionRequest(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : title,
             startsAt: APIDateFormatter.string(from: startsAt),
             endsAt: APIDateFormatter.string(from: endsAt),
@@ -460,26 +521,32 @@ struct CreateSessionDraft {
             venueNote: nil,
             courtCount: courtCount,
             maxPlayers: maxPlayers,
-            feeTotalVnd: feeTotalVnd,
-            shuttlecockCostVnd: shuttlecockCostVnd,
+            // When fixed price is set, omit split fees so the server uses feePerPlayerVnd.
+            feeTotalVnd: fixed == nil ? feeTotalVnd : nil,
+            shuttlecockCostVnd: fixed == nil ? shuttlecockCostVnd : nil,
             skillLevel: skillLevel,
             visibility: "PRIVATE_LINK",
+            costTrackingEnabled: true,
+            feePerPlayerVnd: fixed,
+            venueLat: nil,
+            venueLng: nil,
             imageUrls: imageUrls
         )
     }
 
     var updateRequest: UpdateSessionRequest {
-        UpdateSessionRequest(
+        let fixed = fixedPricePerPlayerVnd
+        return UpdateSessionRequest(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : title,
             startsAt: APIDateFormatter.string(from: startsAt),
             endsAt: APIDateFormatter.string(from: endsAt),
             venueName: venueName,
             courtCount: courtCount,
             maxPlayers: maxPlayers,
-            feeTotalVnd: feeTotalVnd,
-            shuttlecockCostVnd: shuttlecockCostVnd,
+            feeTotalVnd: fixed == nil ? feeTotalVnd : nil,
+            shuttlecockCostVnd: fixed == nil ? shuttlecockCostVnd : nil,
             skillLevel: skillLevel,
-            feePerPlayerVnd: fixedPricePerPlayerVnd,
+            feePerPlayerVnd: fixed,
             imageUrls: imageUrls
         )
     }

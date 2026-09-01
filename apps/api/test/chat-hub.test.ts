@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { ChatHub } from "../src/services/chat-hub.js";
+import {
+  ChatHub,
+  groupChatRoom,
+  sessionChatRoom
+} from "../src/services/chat-hub.js";
 
 describe("ChatHub", () => {
   it("broadcasts only to sockets in the target room", () => {
@@ -44,5 +48,11 @@ describe("ChatHub", () => {
 
     expect(() => hub.broadcast("R", { x: 1 })).not.toThrow();
     expect(good.send).toHaveBeenCalled();
+  });
+
+  it("uses distinct room keys for session and group chats", () => {
+    expect(sessionChatRoom("abc")).toBe("session:abc");
+    expect(groupChatRoom("abc")).toBe("group:abc");
+    expect(sessionChatRoom("abc")).not.toBe(groupChatRoom("abc"));
   });
 });

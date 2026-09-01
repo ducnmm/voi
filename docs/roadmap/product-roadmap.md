@@ -9,46 +9,47 @@ This roadmap treats Voi as a professional product, not a temporary MVP.
 - CI verification.
 - Dockerized API.
 - OpenAPI contract.
-- Web app skeleton (Next.js).
-- iOS architecture skeleton (deprioritized reference).
+- iOS architecture skeleton (SwiftUI, primary client).
+- Web app skeleton (Next.js companion).
 - Dev seed data.
 
 ## Private Alpha
 
-- Durable web auth (email magic link or OAuth).
-- Real create session flow wired to API.
-- Real group list and group detail.
-- Invite acceptance from shareable links.
-- RSVP and waitlist in the browser.
-- Host lineup editing.
+- Durable iOS auth with Sign in with Apple.
+- Real iOS create session flow wired to API.
+- Real iOS group list and group detail.
+- Invite acceptance from iOS and shareable web links.
+- RSVP and waitlist on iOS, with browser fallback.
+- Host lineup editing on iOS.
 - Manual payment tracking.
-- Notification preferences and in-app notification surfacing.
+- Notification preferences and in-app notification surfacing on iOS.
 
 ## Private Beta
 
-- Notification delivery worker (web push or email).
+- APNs notification delivery worker.
 - Recurring session creation.
 - Duplicate previous session.
 - Player profile and skill level.
 - Host controls for approval and locking attendance.
 - Improved lineup board with manual reorder.
 - Error reporting and analytics.
+- TestFlight distribution to real badminton groups.
 
 ## Public Beta
 
-- Hosted web deployment (production + staging).
+- Hosted API and web companion deployment (production + staging).
 - Production database and staging database.
 - Privacy policy and account deletion.
 - Custom domain and shareable session/invite URLs.
 - Payment tracking polish for VND.
 - Venue profile support without direct booking.
+- App Store metadata, review readiness, and staged iOS release.
 
-## iOS Channel (after web validation)
+## Web Companion Expansion
 
-- Native SwiftUI app against the same API.
-- Sign in with Apple.
-- APNs delivery worker.
-- TestFlight distribution and App Store metadata.
+- Browser parity for the core coordination flows.
+- Rich invite and join flows without app installation.
+- Web push or email fallback where APNs is unavailable.
 
 ## Professional Version
 
