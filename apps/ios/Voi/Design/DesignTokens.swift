@@ -109,6 +109,7 @@ struct AvatarView: View {
                             initialsText
                         }
                     }
+                    .frame(width: size, height: size)
                 } else {
                     initialsText
                 }

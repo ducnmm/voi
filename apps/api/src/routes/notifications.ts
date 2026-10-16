@@ -43,6 +43,63 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
     }
   );
 
+  app.get("/me/badges", { preHandler: app.authenticate }, async (request) => {
+    const userId = getAuthenticatedUserId(request);
+    const memberships = await prisma.groupMember.findMany({
+      where: { userId },
+      select: { groupId: true }
+    });
+    const groupIds = memberships.map((row) => row.groupId);
+
+    const [alertsUnread, sessions] = await Promise.all([
+      prisma.notification.count({ where: { userId, readAt: null } }),
+      groupIds.length > 0
+        ? prisma.session.findMany({
+            where: { groupId: { in: groupIds } },
+            select: { id: true }
+          })
+        : Promise.resolve([])
+    ]);
+    const sessionIds = sessions.map((row) => row.id);
+
+    const [groupLast, sessionLast] = await Promise.all([
+      groupIds.length > 0
+        ? prisma.chatMessage.groupBy({
+            by: ["groupId"],
+            where: { groupId: { in: groupIds } },
+            _max: { createdAt: true }
+          })
+        : Promise.resolve([]),
+      sessionIds.length > 0
+        ? prisma.chatMessage.groupBy({
+            by: ["sessionId"],
+            where: { sessionId: { in: sessionIds } },
+            _max: { createdAt: true }
+          })
+        : Promise.resolve([])
+    ]);
+
+    const chats = [
+      ...groupLast.flatMap((row) =>
+        row.groupId && row._max.createdAt
+          ? [{ room: `group:${row.groupId}`, lastMessageAt: row._max.createdAt.toISOString() }]
+          : []
+      ),
+      ...sessionLast.flatMap((row) =>
+        row.sessionId && row._max.createdAt
+          ? [
+              {
+                room: `session:${row.sessionId}`,
+                lastMessageAt: row._max.createdAt.toISOString()
+              }
+            ]
+          : []
+      )
+    ];
+
+    return { alertsUnread, chats };
+  });
+
   app.get("/notifications", { preHandler: app.authenticate }, async (request) => {
     const userId = getAuthenticatedUserId(request);
 

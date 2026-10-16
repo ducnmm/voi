@@ -165,7 +165,7 @@ final class HomeViewModel: ObservableObject {
             fixedPricePerPlayerVnd: draft.fixedPricePerPlayerVnd,
             courts: courts,
             participants: [.joined(authSession.currentPlayer)],
-            inviteUrl: "voi://invites/\(id)"
+            inviteUrl: VoiDeepLink.joinSession(token: id).url.absoluteString
         )
     }
 

@@ -91,6 +91,7 @@ enum A11y {
         static let createEvent = "profile.createEvent"
         static let manageEvents = "profile.manageEvents"
         static let displayName = "profile.displayName"
+        static let changePhoto = "profile.changePhoto"
         static let save = "profile.save"
         static let settings = "profile.settings"
     }
@@ -114,7 +115,16 @@ enum A11y {
         static let token = "invite.token"
         static let lookup = "invite.lookup"
         static let join = "invite.join"
+        static let joinGroup = "invite.joinGroup"
         static let done = "invite.done"
+    }
+
+    enum Share {
+        static let qr = "share.qr"
+        static let link = "share.link"
+        static let copy = "share.copy"
+        static let send = "share.send"
+        static let group = "share.group"
     }
 
     enum Payment {

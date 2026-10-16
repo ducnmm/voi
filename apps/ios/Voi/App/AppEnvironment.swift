@@ -4,6 +4,9 @@ import SwiftUI
 final class AppEnvironment: ObservableObject {
     let apiClient: APIClient
     let authSession: AuthSession
+    /// Set from a QR / `voi://` / https link. RootView presents create-session.
+    @Published var openCreateSession = false
+    @Published var pendingInviteToken: String?
 
     init(apiClient: APIClient? = nil, authSession: AuthSession? = nil) {
         let session = authSession ?? AuthSession()

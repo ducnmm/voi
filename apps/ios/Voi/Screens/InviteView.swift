@@ -13,6 +13,8 @@ struct InviteView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var resolvedSession: SessionSummary?
+    @State private var resolvedGroup: InvitePreview.GroupRef?
+    @State private var joinedGroup = false
     @State private var tokenInput: String = ""
     @State private var isLoading = false
     @State private var isJoining = false
@@ -41,6 +43,8 @@ struct InviteView: View {
                 VStack(alignment: .leading, spacing: VoiSpacing.lg) {
                     if let displaySession {
                         sessionContent(displaySession)
+                    } else if let resolvedGroup {
+                        groupContent(resolvedGroup)
                     } else {
                         tokenEntry
                     }
@@ -74,7 +78,7 @@ struct InviteView: View {
         VStack(alignment: .leading, spacing: VoiSpacing.md) {
             Text("Open invite")
                 .font(.title3.bold())
-            Text("Paste an invite token or open a voi://invites/… link.")
+            Text("Paste an invite token, or open a voi://join/… link.")
                 .font(.subheadline)
                 .foregroundStyle(VoiColor.muted)
 
@@ -169,6 +173,52 @@ struct InviteView: View {
         .accessibilityIdentifier(A11y.Invite.join)
     }
 
+    @ViewBuilder
+    private func groupContent(_ group: InvitePreview.GroupRef) -> some View {
+        Image(systemName: "person.3.fill")
+            .font(.largeTitle)
+            .foregroundStyle(VoiColor.court)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, VoiSpacing.lg)
+
+        Text("You're invited to the group")
+            .font(.subheadline)
+            .foregroundStyle(VoiColor.muted)
+
+        Text(group.name)
+            .font(.title2.bold())
+            .foregroundStyle(VoiColor.ink)
+
+        Text("Join to see this group's sessions and chat.")
+            .font(.subheadline)
+            .foregroundStyle(VoiColor.muted)
+
+        Button {
+            Task { await joinGroup() }
+        } label: {
+            if isJoining {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, VoiSpacing.md)
+            } else {
+                Label(
+                    joinedGroup ? "Joined group" : "Join group",
+                    systemImage: joinedGroup ? "checkmark.circle.fill" : "plus.circle.fill"
+                )
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, VoiSpacing.md)
+                .background(joinedGroup ? VoiColor.court : VoiColor.court.opacity(0.14))
+                .foregroundStyle(joinedGroup ? Color.white : VoiColor.court)
+                .clipShape(RoundedRectangle(cornerRadius: VoiRadius.control, style: .continuous))
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(joinedGroup || isJoining)
+        .padding(.top, VoiSpacing.sm)
+        .accessibilityIdentifier(A11y.Invite.joinGroup)
+    }
+
     private func resolve(token: String) async {
         guard !token.isEmpty else { return }
         isLoading = true
@@ -176,18 +226,19 @@ struct InviteView: View {
         defer { isLoading = false }
         do {
             let response = try await environment.apiClient.resolveInvite(token: token)
+            tokenInput = response.invite.token
             if let dto = response.invite.session {
                 resolvedSession = SessionSummary(
                     dto: dto,
-                    inviteUrl: "voi://invites/\(response.invite.token)"
+                    inviteUrl: response.invite.inviteUrl
+                        ?? VoiDeepLink.joinSession(token: response.invite.token).url.absoluteString
                 )
-                tokenInput = response.invite.token
+                resolvedGroup = nil
             } else if let group = response.invite.group {
-                errorMessage = "Invite is for group “\(group.name)”. Open it after accepting to see sessions."
-                // Still accept membership without a session card.
+                resolvedGroup = group
                 resolvedSession = nil
             } else {
-                errorMessage = "Invite has no session attached."
+                errorMessage = "Invite has no session or group attached."
             }
         } catch {
             errorMessage = (error as? APIErrorResponse)?.error.message ?? "Invite not found or expired."
@@ -223,6 +274,26 @@ struct InviteView: View {
             onJoined?(updated)
         } catch {
             errorMessage = (error as? APIErrorResponse)?.error.message ?? "Could not join this session."
+        }
+    }
+
+    private func joinGroup() async {
+        isJoining = true
+        errorMessage = nil
+        defer { isJoining = false }
+
+        let token = tokenInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let authToken = environment.authSession.token else {
+            errorMessage = "Sign in to accept this invite."
+            return
+        }
+        guard !token.isEmpty else { return }
+
+        do {
+            _ = try await environment.apiClient.acceptInvite(token: authToken, inviteToken: token)
+            joinedGroup = true
+        } catch {
+            errorMessage = (error as? APIErrorResponse)?.error.message ?? "Could not join this group."
         }
     }
 

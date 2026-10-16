@@ -30,6 +30,9 @@ import { closeRedis, connectRedis } from "./services/rate-limit.js";
 
 export async function buildApp() {
   const app = Fastify({
+    // Without this, request.protocol stays "http" behind Railway's TLS proxy
+    // and upload URLs would be blocked by iOS ATS.
+    trustProxy: env.NODE_ENV === "production",
     logger: {
       level: env.LOG_LEVEL,
       redact: {

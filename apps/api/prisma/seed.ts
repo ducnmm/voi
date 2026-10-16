@@ -211,6 +211,30 @@ async function main() {
       scheduledFor: new Date()
     }
   });
+
+  const an = players.find((player) => player.displayName === "An");
+  await prisma.chatMessage.createMany({
+    data: [
+      {
+        groupId: group.id,
+        authorId: host.id,
+        body: "Tối nay 19h Ky Hoa nhé mọi người.",
+        createdAt: new Date(Date.now() - 3600_000)
+      },
+      {
+        groupId: group.id,
+        authorId: an?.id ?? host.id,
+        body: "Ok host, mình Join rồi.",
+        createdAt: new Date(Date.now() - 1800_000)
+      },
+      {
+        sessionId: session.id,
+        authorId: host.id,
+        body: "Nhớ mang giày sân nhé.",
+        createdAt: new Date(Date.now() - 900_000)
+      }
+    ]
+  });
 }
 
 main()

@@ -14,7 +14,23 @@ SwiftUI primary client, largely wired to the real `/v1` API:
 
 Still client-only / partial: weekly recurrence, player self-pay (host confirms on server), APNs device registration, notification read state, Apple Sign-In.
 
-Default API base: `http://localhost:43187/v1` (override with env `VOI_API_BASE_URL`).
+API base URL resolution:
+
+1. Process env `VOI_API_BASE_URL` (Xcode scheme / XCUITest)
+2. On a physical device, Info.plist `VOIApiBaseURL`
+3. Otherwise `http://localhost:43187/v1` (simulator)
+
+## Device install
+
+Simulator can hit the Mac's local API. A physical iPhone cannot.
+
+1. Deploy the API (Railway) and put `https://<domain>/v1` in `Voi/Info.plist` → `VOIApiBaseURL`, then `xcodegen generate`.
+2. Accept the Xcode license if prompted: `sudo xcodebuild -license`.
+3. On the iPhone: Developer Mode, trust the computer, plug in via USB.
+4. Xcode → scheme **Voi** → the connected device → Run. Team `68L42T9FWT` is already set for automatic signing.
+5. Sign in with Google (dev login is off in production).
+
+Tapping the icon after a Run from Xcode uses the compiled `VOIApiBaseURL`, not scheme env vars.
 
 ## End-to-end tests
 

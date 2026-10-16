@@ -18,6 +18,10 @@ node_modules/
 .env.*
 !.env.example
 
+# Railway CLI local link; keep .railway/railway.ts in source
+.railway/config.json
+.railway/*.local
+
 # Build output
 dist/
 

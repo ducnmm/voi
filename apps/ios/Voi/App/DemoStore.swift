@@ -6,8 +6,10 @@ final class DemoStore: ObservableObject {
     @Published var hosts: [PersonProfile] = []
     @Published var players: [PersonProfile] = []
     @Published var notifications: [AppNotification] = []
+    @Published var unreadCount = 0
+    @Published var unreadChatCount = 0
 
-    var unreadCount: Int { notifications.filter { !$0.isRead }.count }
+    private static let chatReadKey = "voi.chatLastRead"
 
     // MARK: People
 
@@ -15,8 +17,8 @@ final class DemoStore: ObservableObject {
         guard let token else { return }
         do {
             let profiles = try await api.fetchPeople(token: token).people.map(PersonProfile.init(dto:))
-            hosts = profiles.filter { $0.role == .host }
-            players = profiles.filter { $0.role == .player }
+            hosts = profiles.filter(\.isHost)
+            players = profiles
         } catch {
             // keep current people if it can't load
         }
@@ -49,11 +51,42 @@ final class DemoStore: ObservableObject {
 
     // MARK: Alerts
 
+    func refreshBadges(api: APIClient, token: String?) async {
+        guard let token else { return }
+        do {
+            let badges = try await api.fetchBadges(token: token)
+            unreadCount = badges.alertsUnread
+            unreadChatCount = badges.chats.filter { chat in
+                APIDateFormatter.date(from: chat.lastMessageAt) > lastRead(for: chat.room)
+            }.count
+        } catch {
+            // keep current badges
+        }
+    }
+
+    func markChatRead(_ roomId: String) {
+        var map = chatReadMap
+        map[roomId] = Date().timeIntervalSince1970
+        UserDefaults.standard.set(map, forKey: Self.chatReadKey)
+    }
+
+    private var chatReadMap: [String: Double] {
+        UserDefaults.standard.dictionary(forKey: Self.chatReadKey) as? [String: Double] ?? [:]
+    }
+
+    private func lastRead(for roomId: String) -> Date {
+        if let raw = chatReadMap[roomId] {
+            return Date(timeIntervalSince1970: raw)
+        }
+        return .distantPast
+    }
+
     func loadNotifications(api: APIClient, token: String?) async {
         guard let token else { return }
         do {
             let response = try await api.fetchNotifications(token: token)
             notifications = response.notifications.map(AppNotification.init(dto:))
+            unreadCount = notifications.filter { !$0.isRead }.count
         } catch {
             // keep whatever is on screen if it can't load
         }
@@ -61,6 +94,7 @@ final class DemoStore: ObservableObject {
 
     func markAllNotificationsRead(api: APIClient? = nil, token: String? = nil) {
         for index in notifications.indices { notifications[index].isRead = true }
+        unreadCount = 0
         guard let api, let token else { return }
         Task {
             _ = try? await api.markAllNotificationsRead(token: token)
@@ -71,6 +105,7 @@ final class DemoStore: ObservableObject {
         guard let index = notifications.firstIndex(where: { $0.id == id }) else { return }
         if !notifications[index].isRead {
             notifications[index].isRead = true
+            unreadCount = notifications.filter { !$0.isRead }.count
             guard let api, let token else { return }
             Task { _ = try? await api.markNotificationRead(token: token, id: id) }
         }
@@ -79,6 +114,7 @@ final class DemoStore: ObservableObject {
     func toggleRead(_ id: String, api: APIClient? = nil, token: String? = nil) {
         guard let index = notifications.firstIndex(where: { $0.id == id }) else { return }
         notifications[index].isRead.toggle()
+        unreadCount = notifications.filter { !$0.isRead }.count
         let nowRead = notifications[index].isRead
         guard nowRead, let api, let token else { return }
         Task {
@@ -88,6 +124,7 @@ final class DemoStore: ObservableObject {
 
     func removeNotification(_ id: String) {
         notifications.removeAll { $0.id == id }
+        unreadCount = notifications.filter { !$0.isRead }.count
     }
 
     func notifyJoined(_ session: SessionSummary) {
@@ -100,6 +137,7 @@ final class DemoStore: ObservableObject {
             isRead: false
         )
         notifications.insert(item, at: 0)
+        unreadCount = notifications.filter { !$0.isRead }.count
     }
 
     // MARK: Following

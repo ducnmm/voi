@@ -32,7 +32,9 @@ export async function connectRedis(): Promise<Redis | null> {
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
     lazyConnect: true,
-    connectTimeout: 2000
+    connectTimeout: 5000,
+    // Railway private networking is IPv6; 0 lets Node pick either family.
+    family: 0
   });
   client.on("error", () => {
     // Avoid crashing on blips; consumeToken falls back to memory.

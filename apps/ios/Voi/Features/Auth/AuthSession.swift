@@ -110,6 +110,23 @@ final class AuthSession: ObservableObject {
         return response.user
     }
 
+    @discardableResult
+    func updateAvatar(_ avatarUrl: URL, using api: APIClient) async throws -> UserProfile {
+        guard let token else {
+            throw APIError.requestFailed
+        }
+        let response = try await api.updateProfile(
+            token: token,
+            request: UpdateProfileRequest(
+                displayName: nil,
+                avatarUrl: avatarUrl.absoluteString,
+                defaultSkillLevel: nil
+            )
+        )
+        currentUser = response.user
+        return response.user
+    }
+
     /// Local-only fallback when offline (no token / API unreachable).
     func updateProfileLocally(displayName: String, skillLevel: SkillLevel) {
         let base = currentUser ?? Mock.currentUserProfile

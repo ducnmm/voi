@@ -27,7 +27,7 @@ COPY --from=build /app/packages/shared/package.json ./packages/shared/package.js
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm --filter @voi/api db:generate
 EXPOSE 43187
-CMD ["node", "apps/api/dist/server.js"]
+CMD ["sh", "-c", "pnpm --filter @voi/api exec prisma migrate deploy && node apps/api/dist/server.js"]

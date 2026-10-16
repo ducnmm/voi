@@ -20,7 +20,11 @@ import {
   notFound
 } from "../utils/api-error.js";
 import { assertCanAccessSession } from "../services/session-access.js";
-import { assertInviteActive, inviteExpiresAt } from "../services/invites.js";
+import {
+  assertInviteActive,
+  buildInviteUrl,
+  inviteExpiresAt
+} from "../services/invites.js";
 import {
   calculateNextWaitlistPosition,
   resolveJoinStatus
@@ -251,7 +255,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 
       return reply.code(201).send({
         session: presentSession(session),
-        inviteUrl: buildInviteUrl(token)
+        inviteUrl: buildInviteUrl("session", token)
       });
     }
   );
@@ -476,10 +480,13 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 
     assertInviteActive(invite);
 
+    const kind = invite.sessionId ? "session" : "group";
     return {
       invite: {
         id: invite.id,
         token: invite.token,
+        kind,
+        inviteUrl: buildInviteUrl(kind, invite.token),
         group: invite.group
           ? {
               id: invite.group.id,
@@ -1070,8 +1077,4 @@ function validateLineupAssignments(
 
 function generateInviteToken(): string {
   return randomBytes(18).toString("base64url");
-}
-
-function buildInviteUrl(token: string): string {
-  return `${env.APP_BASE_URL.replace(/\/?$/, "/")}invites/${token}`;
 }

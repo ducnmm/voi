@@ -92,22 +92,22 @@ export async function upsertUserWithIdentity(input: {
     include: { user: true }
   });
   if (existing) {
-    return existing.user;
+    return applyGoogleAvatarIfMissing(existing.user, input.avatarUrl);
   }
 
-  const user = await prisma.user.upsert({
-    where: { email: input.email },
-    update: {
-      ...(input.displayName ? { displayName: input.displayName } : {}),
-      ...(input.avatarUrl ? { avatarUrl: input.avatarUrl } : {})
-    },
-    create: {
-      email: input.email,
-      displayName:
-        input.displayName ?? input.email.split("@")[0] ?? input.email,
-      avatarUrl: input.avatarUrl
-    }
+  const byEmail = await prisma.user.findUnique({
+    where: { email: input.email }
   });
+  const user = byEmail
+    ? await applyGoogleAvatarIfMissing(byEmail, input.avatarUrl)
+    : await prisma.user.create({
+        data: {
+          email: input.email,
+          displayName:
+            input.displayName ?? input.email.split("@")[0] ?? input.email,
+          avatarUrl: input.avatarUrl
+        }
+      });
 
   await prisma.authIdentity.create({
     data: {
@@ -118,4 +118,18 @@ export async function upsertUserWithIdentity(input: {
   });
 
   return user;
+}
+
+/** Google photo is the fallback only — never replace an uploaded avatar. */
+async function applyGoogleAvatarIfMissing(
+  user: User,
+  avatarUrl?: string
+): Promise<User> {
+  if (user.avatarUrl || !avatarUrl) {
+    return user;
+  }
+  return prisma.user.update({
+    where: { id: user.id },
+    data: { avatarUrl }
+  });
 }

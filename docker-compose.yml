@@ -5,8 +5,11 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: voi-api
     environment:
+      # Image defaults NODE_ENV=production; override so local compose keeps /auth/dev.
+      NODE_ENV: development
       DATABASE_URL: postgresql://voi:voi@postgres:5432/voi_dev?schema=public
       JWT_SECRET: replace-with-a-long-random-secret
+      GOOGLE_IOS_CLIENT_ID: 291960099224-n1tslm0u0rfvjb35is8lgvb0rbrc014r.apps.googleusercontent.com
       LOG_LEVEL: info
       API_HOST: 0.0.0.0
       API_PORT: 43187

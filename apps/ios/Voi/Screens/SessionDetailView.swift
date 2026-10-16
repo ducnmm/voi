@@ -12,6 +12,7 @@ struct SessionDetailView: View {
     @State private var addingScore = false
     @State private var reviewSubject: Player?
     @State private var duplicating = false
+    @State private var sharePayload: InviteSharePayload?
 
     init(session: SessionSummary, currentPlayer: Player) {
         _viewModel = StateObject(
@@ -79,8 +80,14 @@ struct SessionDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     if let inviteUrl = session.inviteUrl, let url = URL(string: inviteUrl) {
-                        ShareLink(item: url) {
-                            Label("Share invite", systemImage: "square.and.arrow.up")
+                        Button {
+                            sharePayload = InviteSharePayload(
+                                title: "Join this session",
+                                detail: "Scan or tap the link to join \(session.title).",
+                                url: url
+                            )
+                        } label: {
+                            Label("QR: join session", systemImage: "qrcode")
                         }
                         .accessibilityIdentifier(A11y.Session.share)
                     }
@@ -138,6 +145,9 @@ struct SessionDetailView: View {
         }
         .sheet(isPresented: $showingCalendar) {
             CalendarEditView(session: session)
+        }
+        .sheet(item: $sharePayload) { payload in
+            InviteShareView(title: payload.title, detail: payload.detail, url: payload.url)
         }
         .navigationDestination(isPresented: $showingChat) {
             ChatView(room: .session(id: session.id, title: session.title))

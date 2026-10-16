@@ -1,12 +1,6 @@
 import Foundation
 import CoreLocation
 
-/// Deterministic mock portrait avatar for a person (stable per seed), until the
-/// backend serves real avatar URLs. Used as the fallback in `Player.displayAvatarUrl`.
-func pravatar(_ seed: String) -> URL? {
-    URL(string: "https://i.pravatar.cc/240?u=voi-\(seed)")
-}
-
 /// Single source of mock data for the app, modelled like real backend entities
 /// so it maps cleanly onto a future API:
 ///
@@ -23,21 +17,21 @@ enum Mock {
 
     // MARK: - Users
 
-    static let an   = Player(id: "u-an",   displayName: "An",   skillLevel: .intermediate, avatarUrl: pravatar("an"))
-    static let binh = Player(id: "u-binh", displayName: "Binh", skillLevel: .intermediate, avatarUrl: pravatar("binh"))
-    static let chi  = Player(id: "u-chi",  displayName: "Chi",  skillLevel: .advanced,     avatarUrl: pravatar("chi"))
-    static let duy  = Player(id: "u-duy",  displayName: "Duy",  skillLevel: .intermediate, avatarUrl: pravatar("duy"))
-    static let hai  = Player(id: "u-hai",  displayName: "Hai",  skillLevel: .intermediate, avatarUrl: pravatar("hai"))
-    static let linh = Player(id: "u-linh", displayName: "Linh", skillLevel: .intermediate, avatarUrl: pravatar("linh"))
-    static let minh = Player(id: "u-minh", displayName: "Minh", skillLevel: .advanced,     avatarUrl: pravatar("minh"))
-    static let tu   = Player(id: "u-tu",   displayName: "Tu",   skillLevel: .intermediate, avatarUrl: pravatar("tu"))
-    static let quan = Player(id: "u-quan", displayName: "Quan", skillLevel: .intermediate, avatarUrl: pravatar("quan"))
-    static let vy   = Player(id: "u-vy",   displayName: "Vy",   skillLevel: .beginner,     avatarUrl: pravatar("vy"))
-    static let khoa = Player(id: "u-khoa", displayName: "Khoa", skillLevel: .beginner,     avatarUrl: pravatar("khoa"))
-    static let nga  = Player(id: "u-nga",  displayName: "Nga",  skillLevel: .intermediate, avatarUrl: pravatar("nga"))
+    static let an   = Player(id: "u-an",   displayName: "An",   skillLevel: .intermediate)
+    static let binh = Player(id: "u-binh", displayName: "Binh", skillLevel: .intermediate)
+    static let chi  = Player(id: "u-chi",  displayName: "Chi",  skillLevel: .advanced)
+    static let duy  = Player(id: "u-duy",  displayName: "Duy",  skillLevel: .intermediate)
+    static let hai  = Player(id: "u-hai",  displayName: "Hai",  skillLevel: .intermediate)
+    static let linh = Player(id: "u-linh", displayName: "Linh", skillLevel: .intermediate)
+    static let minh = Player(id: "u-minh", displayName: "Minh", skillLevel: .advanced)
+    static let tu   = Player(id: "u-tu",   displayName: "Tu",   skillLevel: .intermediate)
+    static let quan = Player(id: "u-quan", displayName: "Quan", skillLevel: .intermediate)
+    static let vy   = Player(id: "u-vy",   displayName: "Vy",   skillLevel: .beginner)
+    static let khoa = Player(id: "u-khoa", displayName: "Khoa", skillLevel: .beginner)
+    static let nga  = Player(id: "u-nga",  displayName: "Nga",  skillLevel: .intermediate)
 
     /// The locally signed-in user.
-    static let you = Player(id: "u-you", displayName: "You", skillLevel: .intermediate, avatarUrl: pravatar("you"))
+    static let you = Player(id: "u-you", displayName: "You", skillLevel: .intermediate)
 
     static let users: [Player] = [an, binh, chi, duy, hai, linh, minh, tu, quan, vy, khoa, nga]
 

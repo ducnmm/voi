@@ -4,8 +4,7 @@ import { CreateGroupSchema, DEFAULT_CURRENCY } from "@voi/shared";
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
 import { forbidden, notFound } from "../utils/api-error.js";
-import { env } from "../config/env.js";
-import { inviteExpiresAt } from "../services/invites.js";
+import { buildInviteUrl, inviteExpiresAt } from "../services/invites.js";
 import { userSummarySelect } from "../services/user-presenter.js";
 
 export async function groupRoutes(app: FastifyInstance): Promise<void> {
@@ -168,7 +167,7 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
           id: invite.id,
           token: invite.token,
           expiresAt: invite.expiresAt.toISOString(),
-          inviteUrl: `${env.APP_BASE_URL.replace(/\/?$/, "/")}invites/${token}`
+          inviteUrl: buildInviteUrl("group", token)
         }
       });
     }

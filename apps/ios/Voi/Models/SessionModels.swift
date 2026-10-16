@@ -53,11 +53,8 @@ struct Player: Identifiable, Hashable {
         String(displayName.prefix(1)).uppercased()
     }
 
-    /// Avatar to display: the real URL if set, otherwise a deterministic mock
-    /// portrait so every player shows a photo until the backend serves avatars.
-    var displayAvatarUrl: URL? {
-        avatarUrl ?? pravatar(id)
-    }
+    /// Uploaded or Google photo. `AvatarView` falls back to initials when nil.
+    var displayAvatarUrl: URL? { avatarUrl }
 }
 
 struct Participant: Identifiable, Hashable {
@@ -297,21 +294,70 @@ struct Review: Identifiable, Hashable {
     var authorInitials: String { author.initials }
 }
 
-/// A host or player profile shown on the People screens. Wraps the underlying
-/// `Player` so names/ids stay consistent with sessions and reviews.
+/// A person in your groups. The same user can host and play.
 struct PersonProfile: Identifiable, Hashable {
     enum Role { case host, player }
 
     let player: Player
-    let role: Role
-    /// Sessions hosted (for a host) or events joined (for a player).
-    let activityCount: Int
+    var isHost: Bool
+    var hostedCount: Int
+    var joinedCount: Int
     var reviews: [Review]
     /// Server-supplied stats (used by the directory, where reviews aren't loaded).
     var ratingOverride: Double? = nil
     var reviewCountOverride: Int? = nil
 
-    var id: String { "\(role == .host ? "host" : "player")-\(player.id)" }
+    init(
+        player: Player,
+        isHost: Bool,
+        hostedCount: Int,
+        joinedCount: Int,
+        reviews: [Review],
+        ratingOverride: Double? = nil,
+        reviewCountOverride: Int? = nil
+    ) {
+        self.player = player
+        self.isHost = isHost
+        self.hostedCount = hostedCount
+        self.joinedCount = joinedCount
+        self.reviews = reviews
+        self.ratingOverride = ratingOverride
+        self.reviewCountOverride = reviewCountOverride
+    }
+
+    init(
+        player: Player,
+        role: Role,
+        activityCount: Int,
+        reviews: [Review],
+        ratingOverride: Double? = nil,
+        reviewCountOverride: Int? = nil
+    ) {
+        self.init(
+            player: player,
+            isHost: role == .host,
+            hostedCount: role == .host ? activityCount : 0,
+            // Hosts auto-join the sessions they create, so they also play.
+            joinedCount: activityCount,
+            reviews: reviews,
+            ratingOverride: ratingOverride,
+            reviewCountOverride: reviewCountOverride
+        )
+    }
+
+    var role: Role { isHost ? .host : .player }
+    var activityCount: Int { isHost ? max(hostedCount, joinedCount) : joinedCount }
+    var roleLabel: String {
+        if isHost && joinedCount > 0 {
+            return NSLocalizedString("Host · Player", comment: "person is both a host and a player")
+        }
+        if isHost {
+            return NSLocalizedString("Host", comment: "person hosts sessions")
+        }
+        return NSLocalizedString("Player", comment: "person plays sessions")
+    }
+
+    var id: String { player.id }
     var name: String { player.displayName }
     var initials: String { player.initials }
 
@@ -455,7 +501,8 @@ extension SessionSummary {
                         }
                 )
             }
-        self.inviteUrl = inviteUrl ?? dto.inviteUrlToken.map { "voi://invites/\($0)" }
+        self.inviteUrl = inviteUrl
+            ?? dto.inviteUrlToken.map { VoiDeepLink.joinSession(token: $0).url.absoluteString }
         imageUrls = dto.imageUrls ?? []
         isCancelled = dto.status == "CANCELLED"
     }

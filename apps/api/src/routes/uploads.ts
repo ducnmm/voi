@@ -5,6 +5,7 @@ import { mkdir, unlink } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import { badRequest } from "../utils/api-error.js";
+import { publicApiOrigin } from "../config/env.js";
 import { ALLOWED_IMAGE_EXT, MAX_UPLOAD_BYTES, UPLOADS_DIR } from "../config/uploads.js";
 
 export async function uploadRoutes(app: FastifyInstance): Promise<void> {
@@ -38,7 +39,7 @@ export async function uploadRoutes(app: FastifyInstance): Promise<void> {
       throw badRequest("Image is too large (max 8MB)");
     }
 
-    const base = `${request.protocol}://${request.host}`;
+    const base = publicApiOrigin(request.protocol, request.host);
     return reply.code(201).send({ url: `${base}/uploads/${filename}` });
   });
 }

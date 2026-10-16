@@ -46,25 +46,27 @@
 		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
-			<key>localhost</key>
+			<key>127.0.0.1</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
 			</dict>
-			<key>127.0.0.1</key>
+			<key>localhost</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
 			</dict>
 		</dict>
 	</dict>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Attach photos when creating a session.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Add badminton sessions to your calendar.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Add badminton sessions to your calendar.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach photos when creating a session.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>VOIApiBaseURL</key>
+	<string>https://api-production-adb70.up.railway.app/v1</string>
 </dict>
 </plist>

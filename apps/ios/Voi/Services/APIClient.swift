@@ -139,6 +139,16 @@ final class APIClient: @unchecked Sendable {
         )
     }
 
+    func createGroupInvite(token: String, groupId: String) async throws -> CreateInviteResponse {
+        try await send(
+            APIRequest<EmptyBody, CreateInviteResponse>(
+                method: .post,
+                path: "groups/\(groupId)/invites",
+                token: token
+            )
+        )
+    }
+
     func createGroup(token: String, request: CreateGroupRequest) async throws -> CreateGroupResponse {
         try await send(
             APIRequest(
@@ -361,6 +371,16 @@ final class APIClient: @unchecked Sendable {
                 method: .post,
                 path: "sessions/\(sessionId)/results",
                 body: CreateResultRequest(label: label, scoreA: scoreA, scoreB: scoreB),
+                token: token
+            )
+        )
+    }
+
+    func fetchBadges(token: String) async throws -> BadgesResponse {
+        try await send(
+            APIRequest<EmptyBody, BadgesResponse>(
+                method: .get,
+                path: "me/badges",
                 token: token
             )
         )
@@ -623,15 +643,9 @@ final class APIClient: @unchecked Sendable {
 }
 
 extension APIClient {
-    /// Default local API from `docker-compose` / `pnpm dev` (`API_PORT=43187`).
-    /// Override with the `VOI_API_BASE_URL` environment variable when needed
-    /// (e.g. `http://localhost:43197/v1` on a machine where 43187 is taken).
-    static let development = APIClient(
-        baseURL: URL(
-            string: ProcessInfo.processInfo.environment["VOI_API_BASE_URL"]
-                ?? "http://localhost:43187/v1"
-        )!
-    )
+    /// Simulator defaults to local `pnpm dev`. A physical device reads
+    /// `VOIApiBaseURL` from Info.plist (scheme env `VOI_API_BASE_URL` still wins).
+    static let development = APIClient(baseURL: APIConfiguration.baseURL)
 }
 
 struct HealthResponse: Codable {

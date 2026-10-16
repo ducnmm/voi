@@ -11,7 +11,7 @@ struct VoiApp: App {
     @StateObject private var store = DemoStore()
     @AppStorage("didOnboard") private var didOnboard = false
     @State private var loggedIn = false
-    @State private var pendingInviteToken: String?
+    @State private var createAfterLogin = false
 
     init() {
         _ = UITestLaunch.bootstrap
@@ -58,13 +58,17 @@ struct VoiApp: App {
             .preferredColorScheme(themeManager.theme.colorScheme)
             .onOpenURL { url in
                 if GIDSignIn.sharedInstance.handle(url) { return }
-                if let token = Self.inviteToken(from: url) {
-                    pendingInviteToken = token
+                handleDeepLink(url)
+            }
+            .onChange(of: loggedIn) { _, isIn in
+                if isIn, createAfterLogin {
+                    createAfterLogin = false
+                    environment.openCreateSession = true
                 }
             }
             .sheet(item: Binding(
-                get: { pendingInviteToken.map(InviteTokenPresentation.init(token:)) },
-                set: { pendingInviteToken = $0?.token }
+                get: { environment.pendingInviteToken.map(InviteTokenPresentation.init(token:)) },
+                set: { environment.pendingInviteToken = $0?.token }
             )) { item in
                 InviteView(inviteToken: item.token) { session in
                     store.notifyJoined(session)
@@ -102,7 +106,7 @@ struct VoiApp: App {
                     await requestPushRegistration()
                 }
                 if let invite = UITestLaunch.inviteToken {
-                    pendingInviteToken = invite
+                    environment.pendingInviteToken = invite
                 }
             }
             // Re-render the whole tree when the language changes so every
@@ -126,16 +130,18 @@ struct VoiApp: App {
         UIApplication.shared.registerForRemoteNotifications()
     }
 
-    /// `voi://invites/{token}` or `https://…/invites/{token}`.
-    private static func inviteToken(from url: URL) -> String? {
-        let parts = url.pathComponents.filter { $0 != "/" }
-        if url.scheme == "voi", url.host == "invites", let token = parts.first, !token.isEmpty {
-            return token
+    private func handleDeepLink(_ url: URL) {
+        guard let link = VoiDeepLink.parse(url) else { return }
+        switch link {
+        case .createHost:
+            if loggedIn {
+                environment.openCreateSession = true
+            } else {
+                createAfterLogin = true
+            }
+        case .joinSession(let token), .joinGroup(let token):
+            environment.pendingInviteToken = token
         }
-        if parts.count >= 2, parts[parts.count - 2] == "invites" {
-            return parts.last
-        }
-        return nil
     }
 }
 

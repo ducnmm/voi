@@ -37,6 +37,8 @@ describe("invites expire", () => {
       url: `/v1/invites/${token}`
     });
     expect(live.statusCode).toBe(200);
+    expect(live.json().invite.kind).toBe("session");
+    expect(live.json().invite.inviteUrl).toContain(`join/session/${token}`);
 
     await prisma.invite.update({
       where: { token },
@@ -70,6 +72,7 @@ describe("invites expire", () => {
     expect(created.statusCode).toBe(201);
     const token = created.json().invite.token as string;
     expect(created.json().invite.expiresAt).toBeTruthy();
+    expect(created.json().invite.inviteUrl).toContain(`join/group/${token}`);
 
     await prisma.invite.update({
       where: { token },

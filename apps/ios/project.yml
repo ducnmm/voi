@@ -43,6 +43,7 @@ targets:
         NSCalendarsFullAccessUsageDescription: "Add badminton sessions to your calendar."
         NSPhotoLibraryUsageDescription: "Attach photos when creating a session."
         GIDClientID: "291960099224-n1tslm0u0rfvjb35is8lgvb0rbrc014r.apps.googleusercontent.com"
+        VOIApiBaseURL: "https://api-production-adb70.up.railway.app/v1"
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - "com.googleusercontent.apps.291960099224-n1tslm0u0rfvjb35is8lgvb0rbrc014r"

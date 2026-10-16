@@ -36,7 +36,7 @@ export async function peopleRoutes(app: FastifyInstance): Promise<void> {
     const groupIds = myGroups.map((group) => group.groupId);
 
     const members = await prisma.groupMember.findMany({
-      where: { groupId: { in: groupIds }, userId: { not: me } },
+      where: { groupId: { in: groupIds } },
       include: {
         user: { select: userSummarySelect }
       }
@@ -56,18 +56,30 @@ export async function peopleRoutes(app: FastifyInstance): Promise<void> {
     const ids = [...byUser.keys()];
 
     // Two group-by queries instead of per-user lookups (avoids N+1).
-    const [reviewGroups, joinedGroups] = await Promise.all([
-      prisma.review.groupBy({
-        by: ["subjectId"],
-        where: { subjectId: { in: ids } },
-        _avg: { rating: true },
-        _count: true
-      }),
-      prisma.sessionParticipant.groupBy({
-        by: ["userId"],
-        where: { userId: { in: ids }, rsvpStatus: "JOINED" },
-        _count: true
-      })
+    const emptyIds = ids.length === 0;
+    const [reviewGroups, joinedGroups, hostedGroups] = await Promise.all([
+      emptyIds
+        ? Promise.resolve([])
+        : prisma.review.groupBy({
+            by: ["subjectId"],
+            where: { subjectId: { in: ids } },
+            _avg: { rating: true },
+            _count: true
+          }),
+      emptyIds
+        ? Promise.resolve([])
+        : prisma.sessionParticipant.groupBy({
+            by: ["userId"],
+            where: { userId: { in: ids }, rsvpStatus: "JOINED" },
+            _count: true
+          }),
+      emptyIds
+        ? Promise.resolve([])
+        : prisma.session.groupBy({
+            by: ["hostUserId"],
+            where: { hostUserId: { in: ids } },
+            _count: true
+          })
     ]);
     const reviewMap = new Map(
       reviewGroups.map((group) => [
@@ -78,6 +90,9 @@ export async function peopleRoutes(app: FastifyInstance): Promise<void> {
     const joinedMap = new Map(
       joinedGroups.map((group) => [group.userId, group._count])
     );
+    const hostedMap = new Map(
+      hostedGroups.map((group) => [group.hostUserId, group._count])
+    );
 
     const people = ids.map((id) => {
       const entry = byUser.get(id)!;
@@ -85,7 +100,9 @@ export async function peopleRoutes(app: FastifyInstance): Promise<void> {
       return {
         ...presentUserSummary(entry.user),
         role: entry.isHost ? "host" : "player",
+        isHost: entry.isHost,
         activityCount: joinedMap.get(id) ?? 0,
+        hostedCount: hostedMap.get(id) ?? 0,
         averageRating: review?.avg ?? null,
         reviewCount: review?.count ?? 0
       };

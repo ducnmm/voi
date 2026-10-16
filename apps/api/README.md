@@ -41,7 +41,29 @@ pnpm db:migrate
 pnpm dev
 ```
 
-The API listens on `http://localhost:43187` by default. Versioned app routes live under `/v1`, and the OpenAPI document is served at `/openapi.json`.
+The API listens on `http://localhost:43187` by default (or `PORT` / `API_PORT`). Versioned app routes live under `/v1`, and the OpenAPI document is served at `/openapi.json`. Health is at `/health` and `/v1/health`.
+
+## Railway
+
+The repo root `railway.json` is the live deploy config (Dockerfile builder, `/health`, restart policy). Do not `railway config apply` `.railway/railway.ts`. The container runs `prisma migrate deploy` then `node apps/api/dist/server.js`.
+
+Required production variables:
+
+- `DATABASE_URL` — Postgres (private plugin URL is fine)
+- `REDIS_URL` — Redis (private plugin URL; ioredis uses IPv6-capable `family: 0`)
+- `JWT_SECRET` — ≥16 characters
+- `GOOGLE_IOS_CLIENT_ID` — iOS OAuth client id (dev login is disabled in production)
+- `NODE_ENV=production`
+- `API_HOST=0.0.0.0`
+
+Optional:
+
+- `PUBLIC_API_URL` — public origin with no `/v1` (e.g. `https://<service>.up.railway.app`). If unset, `RAILWAY_PUBLIC_DOMAIN` is used as `https://…`.
+- `APP_BASE_URL=voi://` — invite deep links
+
+Uploads are written to `/app/uploads`. Attach a Railway volume there or images disappear on each deploy.
+
+The iOS app talks to `https://<domain>/v1`. CORS does not apply to the native client.
 
 ## Testing
 

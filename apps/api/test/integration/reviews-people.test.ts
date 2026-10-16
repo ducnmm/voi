@@ -177,14 +177,23 @@ describe("people directory", () => {
     const fromHost = (
       await app.inject({ method: "GET", url: "/v1/people", headers: auth(host.token) })
     ).json().people;
+    const selfAsHost = fromHost.find((p: any) => p.id === host.userId);
+    expect(selfAsHost).toBeTruthy();
+    expect(selfAsHost.isHost).toBe(true);
     const playerEntry = fromHost.find((p: any) => p.id === player.userId);
     expect(playerEntry).toBeTruthy();
     expect(playerEntry.role).toBe("player");
 
+    await createSession(app, host.token, gid);
+
     const fromPlayer = (
       await app.inject({ method: "GET", url: "/v1/people", headers: auth(player.token) })
     ).json().people;
-    expect(fromPlayer.find((p: any) => p.id === host.userId).role).toBe("host");
+    const hostEntry = fromPlayer.find((p: any) => p.id === host.userId);
+    expect(hostEntry.role).toBe("host");
+    expect(hostEntry.isHost).toBe(true);
+    expect(hostEntry.hostedCount).toBeGreaterThanOrEqual(1);
+    expect(hostEntry.activityCount).toBeGreaterThanOrEqual(1);
 
     const hostsOnly = (
       await app.inject({ method: "GET", url: "/v1/people?role=host", headers: auth(player.token) })
@@ -193,12 +202,16 @@ describe("people directory", () => {
     expect(hostsOnly.length).toBe(1);
   });
 
-  it("excludes the requester and people from other groups", async () => {
+  it("includes the requester and excludes people from other groups", async () => {
     const host = await devLogin(app, "ppl_iso_host@voi.test");
     await createGroup(app, host.token);
+    const outsider = await devLogin(app, "ppl_iso_out@voi.test");
+    await createGroup(app, outsider.token);
+
     const fromHost = (
       await app.inject({ method: "GET", url: "/v1/people", headers: auth(host.token) })
     ).json().people;
-    expect(fromHost).toEqual([]);
+    expect(fromHost.map((p: any) => p.id)).toEqual([host.userId]);
+    expect(fromHost[0].isHost).toBe(true);
   });
 });

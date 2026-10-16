@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
     @ObservedObject var authSession: AuthSession
@@ -12,20 +13,45 @@ struct ProfileView: View {
     @State private var saveMessage = ""
     @State private var isSaving = false
     @State private var isCreatingSession = false
+    @State private var avatarItem: PhotosPickerItem?
+    @State private var isUploadingAvatar = false
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    NavigationLink {
-                        PersonDetailView(person: myProfile)
-                    } label: {
-                        HStack(spacing: VoiSpacing.md) {
-                            AvatarView(
-                                url: authSession.currentPlayer.displayAvatarUrl,
-                                initials: String(displayName.prefix(1)).uppercased(),
-                                size: 56
-                            )
+                    HStack(spacing: VoiSpacing.md) {
+                        PhotosPicker(selection: $avatarItem, matching: .images) {
+                            ZStack(alignment: .bottomTrailing) {
+                                AvatarView(
+                                    url: authSession.currentPlayer.displayAvatarUrl,
+                                    initials: String(displayName.prefix(1)).uppercased(),
+                                    size: 56
+                                )
+                                .overlay {
+                                    if isUploadingAvatar {
+                                        Circle()
+                                            .fill(.black.opacity(0.35))
+                                        ProgressView().tint(.white)
+                                    }
+                                }
+
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(6)
+                                    .background(VoiColor.court, in: Circle())
+                                    .offset(x: 2, y: 2)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isUploadingAvatar)
+                        .accessibilityLabel("Change photo")
+                        .accessibilityIdentifier(A11y.Profile.changePhoto)
+
+                        NavigationLink {
+                            PersonDetailView(person: myProfile)
+                        } label: {
                             VStack(alignment: .leading, spacing: VoiSpacing.xs) {
                                 Text(displayName.isEmpty ? "You" : displayName)
                                     .font(.headline)
@@ -33,9 +59,10 @@ struct ProfileView: View {
                                     .font(.subheadline)
                                     .foregroundStyle(VoiColor.muted)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .padding(.vertical, VoiSpacing.xs)
                     }
+                    .padding(.vertical, VoiSpacing.xs)
                 }
 
                 Section("Events") {
@@ -89,6 +116,9 @@ struct ProfileView: View {
             }
             .navigationTitle("Profile")
             .onAppear(perform: syncFromSession)
+            .onChange(of: avatarItem) { _, item in
+                Task { await uploadAvatar(item) }
+            }
             .sheet(isPresented: $isCreatingSession) {
                 CreateSessionView(groupName: sessionsViewModel.activeGroupName) { draft in
                     try await sessionsViewModel.createSession(draft)
@@ -99,6 +129,40 @@ struct ProfileView: View {
             } message: {
                 Text(saveMessage)
             }
+        }
+    }
+
+    private func uploadAvatar(_ item: PhotosPickerItem?) async {
+        guard let item, let token = environment.authSession.token else { return }
+        isUploadingAvatar = true
+        defer { isUploadingAvatar = false }
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let uiImage = UIImage(data: data),
+                  let jpeg = uiImage.jpegData(compressionQuality: 0.85)
+            else {
+                saveMessage = "Could not read that photo."
+                didSave = true
+                return
+            }
+            let uploaded = try await environment.apiClient.uploadImage(
+                token: token,
+                data: jpeg,
+                mimeType: "image/jpeg"
+            )
+            guard let url = URL(string: uploaded.url) else {
+                saveMessage = "Could not save the photo."
+                didSave = true
+                return
+            }
+            _ = try await authSession.updateAvatar(url, using: environment.apiClient)
+        } catch {
+            if let apiError = error as? APIErrorResponse {
+                saveMessage = apiError.error.message
+            } else {
+                saveMessage = "Could not upload the photo."
+            }
+            didSave = true
         }
     }
 
@@ -130,7 +194,16 @@ struct ProfileView: View {
         let joined = sessionsViewModel.sessions.filter { session in
             session.joinedParticipants.contains { $0.player.id == authSession.currentPlayer.id }
         }.count
-        return PersonProfile(player: authSession.currentPlayer, role: .player, activityCount: joined, reviews: [])
+        let hosted = sessionsViewModel.sessions.filter {
+            $0.hostUserId == authSession.currentPlayer.id
+        }.count
+        return PersonProfile(
+            player: authSession.currentPlayer,
+            isHost: hosted > 0,
+            hostedCount: hosted,
+            joinedCount: joined,
+            reviews: []
+        )
     }
 
     private func syncFromSession() {

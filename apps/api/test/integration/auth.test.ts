@@ -72,6 +72,7 @@ describe("POST /auth/google", () => {
     expect(body.refreshToken).toBeTruthy();
     expect(body.user.email).toBe("neo@voi.test");
     expect(body.user.displayName).toBe("Neo");
+    expect(body.user.avatarUrl).toBe("https://example.com/p.png");
 
     const me = await app.inject({
       method: "GET",
@@ -92,6 +93,54 @@ describe("POST /auth/google", () => {
     expect(second.user.id).toBe(first.user.id);
     expect(await prisma.user.count()).toBe(1);
     expect(await prisma.authIdentity.count()).toBe(1);
+  });
+
+  it("does not overwrite an uploaded avatar on later Google logins", async () => {
+    mockVerify.mockResolvedValue({
+      sub: "g-av",
+      email: "av@voi.test",
+      name: "Av",
+      picture: "https://example.com/g.png"
+    });
+    const first = (await google("t")).json();
+    expect(first.user.avatarUrl).toBe("https://example.com/g.png");
+
+    const patched = await app.inject({
+      method: "PATCH",
+      url: "/v1/me",
+      headers: auth(first.accessToken),
+      payload: { avatarUrl: "https://cdn.example.com/me.jpg" }
+    });
+    expect(patched.statusCode).toBe(200);
+    expect(patched.json().user.avatarUrl).toBe("https://cdn.example.com/me.jpg");
+
+    mockVerify.mockResolvedValue({
+      sub: "g-av",
+      email: "av@voi.test",
+      name: "Av",
+      picture: "https://example.com/g2.png"
+    });
+    const second = (await google("t")).json();
+    expect(second.user.avatarUrl).toBe("https://cdn.example.com/me.jpg");
+  });
+
+  it("fills a missing avatar from Google on a later login", async () => {
+    mockVerify.mockResolvedValue({
+      sub: "g-empty",
+      email: "e@voi.test",
+      name: "E"
+    });
+    const first = (await google("t")).json();
+    expect(first.user.avatarUrl).toBeFalsy();
+
+    mockVerify.mockResolvedValue({
+      sub: "g-empty",
+      email: "e@voi.test",
+      name: "E",
+      picture: "https://example.com/later.png"
+    });
+    const second = (await google("t")).json();
+    expect(second.user.avatarUrl).toBe("https://example.com/later.png");
   });
 
   it("rejects an invalid token", async () => {

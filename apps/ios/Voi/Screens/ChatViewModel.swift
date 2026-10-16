@@ -34,15 +34,19 @@ final class ChatViewModel: ObservableObject {
     var myId: String { authSession?.currentPlayer.id ?? "" }
 
     func configure(api: APIClient, authSession: AuthSession, room: ChatRoom) {
+        if self.room != room {
+            stop()
+            messages = []
+        }
         self.api = api
         self.authSession = authSession
         self.room = room
     }
 
     func start() async {
+        await loadHistory()
         guard !started else { return }
         started = true
-        await loadHistory()
         connect()
     }
 

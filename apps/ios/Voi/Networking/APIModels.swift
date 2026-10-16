@@ -167,8 +167,21 @@ struct InvitePreview: Codable {
 
     let id: String
     let token: String
+    let kind: String?
+    let inviteUrl: String?
     let group: GroupRef?
     let session: SessionDTO?
+}
+
+struct CreateInviteResponse: Codable {
+    struct Invite: Codable {
+        let id: String
+        let token: String
+        let expiresAt: String?
+        let inviteUrl: String
+    }
+
+    let invite: Invite
 }
 
 struct AcceptInviteResponse: Codable {
@@ -301,6 +314,16 @@ struct NotificationsResponse: Codable {
     let notifications: [NotificationDTO]
 }
 
+struct BadgeChatDTO: Codable {
+    let room: String
+    let lastMessageAt: String
+}
+
+struct BadgesResponse: Codable {
+    let alertsUnread: Int
+    let chats: [BadgeChatDTO]
+}
+
 extension AppNotification {
     /// The server stores a type + session; the client renders the text.
     init(dto: NotificationDTO) {
@@ -394,7 +417,9 @@ struct PersonDTO: Codable {
     let avatarUrl: URL?
     let defaultSkillLevel: SkillLevel?
     let role: String
+    let isHost: Bool?
     let activityCount: Int
+    let hostedCount: Int?
     let averageRating: Double?
     let reviewCount: Int
 }
@@ -420,6 +445,7 @@ struct FollowToggleResponse: Codable {
 
 extension PersonProfile {
     init(dto: PersonDTO) {
+        let host = dto.isHost ?? (dto.role == "host")
         self.init(
             player: Player(
                 id: dto.id,
@@ -427,8 +453,9 @@ extension PersonProfile {
                 skillLevel: dto.defaultSkillLevel ?? .open,
                 avatarUrl: dto.avatarUrl
             ),
-            role: dto.role == "host" ? .host : .player,
-            activityCount: dto.activityCount,
+            isHost: host,
+            hostedCount: dto.hostedCount ?? 0,
+            joinedCount: dto.activityCount,
             reviews: [],
             ratingOverride: dto.averageRating,
             reviewCountOverride: dto.reviewCount

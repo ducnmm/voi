@@ -4,8 +4,11 @@ import SwiftUI
 struct ChatView: View {
     let room: ChatRoom
     @EnvironmentObject private var environment: AppEnvironment
+    @EnvironmentObject private var store: DemoStore
     @StateObject private var viewModel = ChatViewModel()
     @State private var draft = ""
+    @State private var sharePayload: InviteSharePayload?
+    @State private var shareError: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,15 +36,64 @@ struct ChatView: View {
         .navigationTitle(room.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            if case .group(let groupId, let title) = room {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await shareGroupInvite(groupId: groupId, name: title) }
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("Invite to group")
+                    .accessibilityIdentifier(A11y.Share.group)
+                }
+            }
+        }
+        .sheet(item: $sharePayload) { payload in
+            InviteShareView(title: payload.title, detail: payload.detail, url: payload.url)
+        }
+        .alert("Could not create invite", isPresented: Binding(
+            get: { shareError != nil },
+            set: { if !$0 { shareError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(shareError ?? "")
+        }
         .task {
             viewModel.configure(
                 api: environment.apiClient,
                 authSession: environment.authSession,
                 room: room
             )
+            store.markChatRead(room.id)
             await viewModel.start()
+            await store.refreshBadges(
+                api: environment.apiClient,
+                token: environment.authSession.token
+            )
         }
         .onDisappear { viewModel.stop() }
+    }
+
+    private func shareGroupInvite(groupId: String, name: String) async {
+        guard let token = environment.authSession.token else { return }
+        do {
+            let response = try await environment.apiClient.createGroupInvite(
+                token: token,
+                groupId: groupId
+            )
+            let url = URL(string: response.invite.inviteUrl)
+                ?? VoiDeepLink.joinGroup(token: response.invite.token).url
+            sharePayload = InviteSharePayload(
+                title: "Join \(name)",
+                detail: "Scan or tap the link to join this group.",
+                url: url
+            )
+        } catch {
+            shareError = (error as? APIErrorResponse)?.error.message
+                ?? "Only a group host can share this invite."
+        }
     }
 
     private var inputBar: some View {
@@ -61,6 +113,7 @@ struct ChatView: View {
                     let sent = await viewModel.send(text)
                     if sent {
                         draft = ""
+                        store.markChatRead(room.id)
                     }
                 }
             } label: {

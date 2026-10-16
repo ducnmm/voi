@@ -48,6 +48,7 @@ final class MessagesViewModel: ObservableObject {
 struct MessagesView: View {
     @StateObject private var viewModel = MessagesViewModel()
     @EnvironmentObject private var environment: AppEnvironment
+    @EnvironmentObject private var store: DemoStore
     @State private var opened: ChatRoom?
 
     var body: some View {
@@ -68,6 +69,14 @@ struct MessagesView: View {
             .accessibilityIdentifier(A11y.Messages.screen)
             .task { await reload() }
             .refreshable { await reload() }
+            .onAppear {
+                Task {
+                    await store.refreshBadges(
+                        api: environment.apiClient,
+                        token: environment.authSession.token
+                    )
+                }
+            }
             .alert(
                 "Messages",
                 isPresented: Binding(

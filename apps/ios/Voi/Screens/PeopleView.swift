@@ -19,19 +19,39 @@ struct PeopleListView: View {
     let people: [PersonProfile]
     var backSymbol = "chevron.left"
     var onClose: () -> Void = {}
+    @EnvironmentObject private var environment: AppEnvironment
+
+    private var orderedPeople: [PersonProfile] {
+        let me = environment.authSession.currentPlayer.id
+        return people.sorted { a, b in
+            if a.id == me { return true }
+            if b.id == me { return false }
+            return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+        }
+    }
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: VoiSpacing.md) {
-                ForEach(people) { person in
-                    NavigationLink {
-                        PersonDetailView(person: person)
-                    } label: {
-                        PersonRow(person: person)
+                if orderedPeople.isEmpty {
+                    Text(kind == .hosts
+                         ? "No hosts in your groups yet."
+                         : "No players in your groups yet.")
+                        .font(.subheadline)
+                        .foregroundStyle(VoiColor.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .voiCard()
+                } else {
+                    ForEach(orderedPeople) { person in
+                        NavigationLink {
+                            PersonDetailView(person: person)
+                        } label: {
+                            PersonRow(person: person)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier(A11y.People.row(person.name))
+                        .accessibilityLabel(person.name)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier(A11y.People.row(person.name))
-                    .accessibilityLabel(person.name)
                 }
             }
             .padding(VoiSpacing.lg)
@@ -118,15 +138,30 @@ struct PeopleScreen: View {
 
 private struct PersonRow: View {
     let person: PersonProfile
+    @EnvironmentObject private var environment: AppEnvironment
+
+    private var isMe: Bool {
+        person.id == environment.authSession.currentPlayer.id
+    }
 
     var body: some View {
         HStack(spacing: VoiSpacing.md) {
             AvatarView(url: person.player.displayAvatarUrl, initials: person.initials, size: 48)
 
             VStack(alignment: .leading, spacing: VoiSpacing.xs) {
-                Text(person.name)
-                    .font(.headline)
-                    .foregroundStyle(VoiColor.ink)
+                HStack(spacing: VoiSpacing.sm) {
+                    Text(person.name)
+                        .font(.headline)
+                        .foregroundStyle(VoiColor.ink)
+                    if isMe {
+                        Text("You")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(VoiColor.court)
+                            .padding(.horizontal, VoiSpacing.sm)
+                            .padding(.vertical, 2)
+                            .background(VoiColor.court.opacity(0.14), in: Capsule())
+                    }
+                }
                 Text(activityText)
                     .font(.subheadline)
                     .foregroundStyle(VoiColor.muted)
@@ -148,7 +183,14 @@ private struct PersonRow: View {
     }
 
     private var activityText: String {
-        let key = person.role == .host ? "%lld sessions hosted" : "%lld events joined"
+        if person.isHost && person.joinedCount > 0 {
+            return String(
+                format: NSLocalizedString("%lld hosted · %lld joined", comment: "host who also plays"),
+                person.hostedCount,
+                person.joinedCount
+            )
+        }
+        let key = person.isHost ? "%lld sessions hosted" : "%lld events joined"
         return String(format: NSLocalizedString(key, comment: "people activity count"), person.activityCount)
     }
 }
@@ -210,7 +252,7 @@ struct PersonDetailView: View {
                     Text(current.name)
                         .font(.title3.bold())
                         .foregroundStyle(VoiColor.ink)
-                    Text(current.role == .host ? "Host" : "Player")
+                    Text(current.roleLabel)
                         .font(.subheadline)
                         .foregroundStyle(VoiColor.muted)
                 }
@@ -230,7 +272,9 @@ struct PersonDetailView: View {
             }
 
             HStack {
-                stat(value: "\(current.activityCount)", label: current.role == .host ? "Hosted" : "Joined")
+                stat(value: "\(current.hostedCount)", label: "Hosted")
+                Divider().frame(height: 32)
+                stat(value: "\(current.joinedCount)", label: "Joined")
                 Divider().frame(height: 32)
                 stat(value: current.reviewCount == 0 ? "—" : String(format: "%.1f", current.averageRating), label: "Rating")
                 Divider().frame(height: 32)
