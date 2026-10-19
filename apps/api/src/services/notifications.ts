@@ -32,6 +32,19 @@ export async function scheduleSessionReminder(input: {
     return;
   }
 
+  const alreadyPending = await input.tx.notification.findFirst({
+    where: {
+      userId: input.userId,
+      sessionId: input.sessionId,
+      type: "SESSION_REMINDER",
+      deliveryStatus: "PENDING"
+    },
+    select: { id: true }
+  });
+  if (alreadyPending) {
+    return;
+  }
+
   await input.tx.notification.create({
     data: {
       userId: input.userId,

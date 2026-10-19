@@ -74,6 +74,19 @@ export async function revokeRefreshToken(raw: string): Promise<void> {
   });
 }
 
+export async function findUserByIdentity(
+  provider: AuthProvider,
+  providerSub: string
+): Promise<User | null> {
+  const identity = await prisma.authIdentity.findUnique({
+    where: {
+      provider_providerSub: { provider, providerSub }
+    },
+    include: { user: true }
+  });
+  return identity?.user ?? null;
+}
+
 /** Find or create the user behind an external identity, linking the identity. */
 export async function upsertUserWithIdentity(input: {
   provider: AuthProvider;

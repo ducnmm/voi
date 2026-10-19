@@ -47,8 +47,8 @@ final class AuthSession: ObservableObject {
         KeychainStore.set(response.refreshToken, for: Keys.refresh)
     }
 
-    /// Real sign-in with a Google-issued token pair; persists to the Keychain.
-    func signIn(google response: GoogleAuthResponse) {
+    /// Persists an access/refresh pair from Google or Apple sign-in.
+    func signIn(tokens response: GoogleAuthResponse) {
         token = response.accessToken
         refreshToken = response.refreshToken
         currentUser = response.user

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { User } from "@prisma/client";
 import {
+  AppleLoginSchema,
   DevLoginSchema,
   GoogleLoginSchema,
   RefreshTokenSchema,
@@ -9,12 +10,17 @@ import {
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
 import { env } from "../config/env.js";
-import { conflict, notFound, notImplemented, unauthorized } from "../utils/api-error.js";
+import { conflict, notFound, unauthorized } from "../utils/api-error.js";
 import {
   verifyGoogleIdToken,
   type GoogleIdentity
 } from "../services/identity/google.js";
 import {
+  verifyAppleIdentityToken,
+  type AppleIdentity
+} from "../services/identity/apple.js";
+import {
+  findUserByIdentity,
   issueAccessToken,
   issueRefreshToken,
   revokeRefreshToken,
@@ -63,8 +69,40 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  app.post("/auth/apple", async () => {
-    throw notImplemented("Sign in with Apple is not configured yet");
+  app.post("/auth/apple", authRateLimit, async (request, reply) => {
+    const body = AppleLoginSchema.parse(request.body);
+
+    let identity: AppleIdentity;
+    try {
+      identity = await verifyAppleIdentityToken(
+        body.identityToken,
+        env.APPLE_BUNDLE_ID
+      );
+    } catch {
+      throw unauthorized("Invalid Apple token");
+    }
+
+    const existing = await findUserByIdentity("APPLE", identity.sub);
+    if (!existing && !identity.email) {
+      throw unauthorized("Apple account did not include an email");
+    }
+
+    const user = existing
+      ? existing
+      : await upsertUserWithIdentity({
+          provider: "APPLE",
+          providerSub: identity.sub,
+          email: identity.email as string,
+          displayName: body.fullName
+        });
+
+    const accessToken = issueAccessToken(app, user.id);
+    const refreshToken = await issueRefreshToken(user.id);
+    return reply.code(201).send({
+      accessToken,
+      refreshToken,
+      user: presentUser(user)
+    });
   });
 
   // Sign in with Google: verify the iOS-issued ID token, mint our token pair.

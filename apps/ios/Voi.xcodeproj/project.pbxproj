@@ -12,6 +12,7 @@
 		0C0DC8F7EAA732AC08874AF5 /* UITestLaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 740217C7DE80E3EA44F77676 /* UITestLaunch.swift */; };
 		0E82C0C9279A323115DA66C7 /* VoiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7592823322B5F8EC5930C1 /* VoiApp.swift */; };
 		10CFE66F0754699EA3B253FD /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC172D470181EA11307AD2A /* NotificationsView.swift */; };
+		125B93E6725FFD25080238C3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1F1235CE217440457B974C0C /* PrivacyInfo.xcprivacy */; };
 		1A716E43DE94A5402BD6284C /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 730BCAAE1785997416298B7D /* OnboardingView.swift */; };
 		253DA7EB30578AB826F29C58 /* OnboardingAndAuthUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67BDC290DD0516E59C719C96 /* OnboardingAndAuthUITests.swift */; };
 		26D200F039BD7FEBD51F060F /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E3C01831FB363A6BD43729D /* HistoryView.swift */; };
@@ -28,6 +29,7 @@
 		5E136DE25ACE47EBCB21C34E /* InviteAlertsPeopleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A989178DD11CBC5332EEC287 /* InviteAlertsPeopleUITests.swift */; };
 		604BFB7A433BC39C31071985 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F6C8530B2AB7607F487F148 /* ChatViewModel.swift */; };
 		61054640CA54D63205FF24DE /* CreateSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD7BDC668EE8EA50813ACAE /* CreateSessionView.swift */; };
+		67EF247453728754BA73FDFA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8487582F7C94864FC1201AE6 /* Assets.xcassets */; };
 		6B969448C1F3A779D0624B9C /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7294785F228F56C0F7CC594 /* RootView.swift */; };
 		6EFA13419B3D04B37E5898E2 /* DemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75DD0EC92F20D0253E4F4491 /* DemoStore.swift */; };
 		70264DF35EE76A14B189B698 /* APIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52ECE038EFDE8F866F845C79 /* APIModels.swift */; };
@@ -85,6 +87,7 @@
 		07093F9B5C86FCF88F01A4A9 /* LanguageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageManager.swift; sourceTree = "<group>"; };
 		113E30C87FB340AFE4AD45FE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		1E3C01831FB363A6BD43729D /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		1F1235CE217440457B974C0C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		24950E0D04BA8890C58F8E47 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		25E2D05E6DC98631F2805071 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		2F6C8530B2AB7607F487F148 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
@@ -109,6 +112,7 @@
 		7F2442158C1C8AB67ABD415A /* SessionDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailViewModel.swift; sourceTree = "<group>"; };
 		836485A8E283A8201B5125B7 /* HostSessionActionsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostSessionActionsUITests.swift; sourceTree = "<group>"; };
 		848711BB35FBFF7527524296 /* VoiDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiDeepLink.swift; sourceTree = "<group>"; };
+		8487582F7C94864FC1201AE6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8D48D1E017C739C9C86AB9E4 /* SessionsFeedUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsFeedUITests.swift; sourceTree = "<group>"; };
 		9146AF2A8D8E5FC7E8995EE4 /* PeopleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleView.swift; sourceTree = "<group>"; };
 		93B75AAA74956F0395891771 /* CreateSessionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSessionUITests.swift; sourceTree = "<group>"; };
@@ -122,6 +126,7 @@
 		BE3E20B84E50CD3E31D911FA /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		CBB7EAEB6090CF8DA2F002B1 /* AccessAndNetworkUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessAndNetworkUITests.swift; sourceTree = "<group>"; };
 		CEC172D470181EA11307AD2A /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
+		CF0D0AA97EB859BC579888B1 /* Voi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Voi.entitlements; sourceTree = "<group>"; };
 		D3A467D3F67266C0CBDB92AB /* APIRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIRequest.swift; sourceTree = "<group>"; };
 		D937606C498DD51596A8840F /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		DCD7BDC668EE8EA50813ACAE /* CreateSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSessionView.swift; sourceTree = "<group>"; };
@@ -152,8 +157,11 @@
 		114C093E37A7D9C13211CB1C /* Voi */ = {
 			isa = PBXGroup;
 			children = (
+				8487582F7C94864FC1201AE6 /* Assets.xcassets */,
 				6CF1F8BD46320D2CFB37C472 /* Info.plist */,
 				546088D8DDEB8478E0A696A9 /* Localizable.xcstrings */,
+				1F1235CE217440457B974C0C /* PrivacyInfo.xcprivacy */,
+				CF0D0AA97EB859BC579888B1 /* Voi.entitlements */,
 				BA7592823322B5F8EC5930C1 /* VoiApp.swift */,
 				5567FEBC4A2CEEEBB7DEED55 /* App */,
 				E0DA2A9084E78FA75B93D2F6 /* Design */,
@@ -360,12 +368,12 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					4FE4519E4F915AFAF36610B4 = {
-						DevelopmentTeam = 68L42T9FWT;
+						DevelopmentTeam = 6X8BZ996MA;
 						ProvisioningStyle = Automatic;
 						TestTargetID = 9C7E6E648A14B9107C383C7E;
 					};
 					9C7E6E648A14B9107C383C7E = {
-						DevelopmentTeam = 68L42T9FWT;
+						DevelopmentTeam = 6X8BZ996MA;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -399,7 +407,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				67EF247453728754BA73FDFA /* Assets.xcassets in Resources */,
 				80CFDC0F697869DA2E2A71AD /* Localizable.xcstrings in Resources */,
+				125B93E6725FFD25080238C3 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -491,7 +501,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 68L42T9FWT;
+				DEVELOPMENT_TEAM = 6X8BZ996MA;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -511,7 +521,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 68L42T9FWT;
+				DEVELOPMENT_TEAM = 6X8BZ996MA;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -530,9 +540,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_ENTITLEMENTS = Voi/Voi.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 68L42T9FWT;
+				DEVELOPMENT_TEAM = 6X8BZ996MA;
 				INFOPLIST_FILE = Voi/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Voi;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -552,9 +563,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_ENTITLEMENTS = Voi/Voi.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 68L42T9FWT;
+				DEVELOPMENT_TEAM = 6X8BZ996MA;
 				INFOPLIST_FILE = Voi/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Voi;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -604,7 +616,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -662,7 +674,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;

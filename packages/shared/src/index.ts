@@ -123,11 +123,17 @@ export const GoogleLoginSchema = z.object({
   idToken: z.string().min(1)
 });
 
+export const AppleLoginSchema = z.object({
+  identityToken: z.string().min(1).max(8192),
+  fullName: z.string().trim().min(1).max(80).optional()
+});
+
 export const RefreshTokenSchema = z.object({
   refreshToken: z.string().min(1)
 });
 
 export type GoogleLoginInput = z.infer<typeof GoogleLoginSchema>;
+export type AppleLoginInput = z.infer<typeof AppleLoginSchema>;
 export type RefreshTokenInput = z.infer<typeof RefreshTokenSchema>;
 
 export const DevLoginSchema = z.object({

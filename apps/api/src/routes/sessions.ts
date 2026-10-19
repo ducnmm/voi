@@ -607,7 +607,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
             }
           });
 
-          if (effectiveStatus === "JOINED") {
+          if (effectiveStatus === "JOINED" && !wasJoined) {
             await cancelPendingReminders({
               tx,
               sessionId: session.id,
@@ -619,7 +619,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
               sessionId: session.id,
               startsAt: session.startsAt
             });
-          } else {
+          } else if (effectiveStatus !== "JOINED") {
             await cancelPendingReminders({
               tx,
               sessionId: session.id,

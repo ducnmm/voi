@@ -60,6 +60,7 @@ Optional:
 
 - `PUBLIC_API_URL` — public origin with no `/v1` (e.g. `https://<service>.up.railway.app`). If unset, `RAILWAY_PUBLIC_DOMAIN` is used as `https://…`.
 - `APP_BASE_URL=voi://` — invite deep links
+- `APPLE_BUNDLE_ID` — audience for Sign in with Apple identity tokens. Defaults to `com.voi.app`.
 
 Uploads are written to `/app/uploads`. Attach a Railway volume there or images disappear on each deploy.
 

@@ -5,13 +5,14 @@
 - [x] `GOOGLE_IOS_CLIENT_ID` / `APPLE_BUNDLE_ID` env (optional).
 - [x] Google ID-token verifier (`google-auth-library`).
 - [x] `auth-tokens` service: access (15m JWT), refresh (rotate/revoke, SHA-256).
-- [x] Routes: `/auth/google`, `/auth/refresh`, `/auth/logout`; `/auth/apple` 501 stub.
+- [x] Routes: `/auth/google`, `/auth/apple`, `/auth/refresh`, `/auth/logout`.
 - [x] Tests: hashToken unit; Google create/repeat/invalid, refresh rotate +
-      revoke, logout, unknown token, apple 501 (mocked verifier). 67/67 green.
+      revoke, logout, unknown token, Apple create/repeat/link/invalid.
+- [x] Sign in with Apple verification (`aud = com.voi.app`, Apple JWKS).
+- [x] iOS: Google and Sign in with Apple; tokens in Keychain; refresh on 401.
 
-## Blocked / follow-ups
+## Follow-ups
 
-- [ ] Sign in with Apple verification — needs a **paid Apple Developer account**
-      (App ID "Sign in with Apple" capability; verify token `aud = com.voi.app`).
-- [ ] iOS: Google Sign-In SDK → call `/auth/google`; store tokens in Keychain;
-      gate the app on auth; refresh on 401 (Phase A / Spec wiring).
+- [ ] App ID capability "Sign in with Apple" must be on in the Apple Developer
+      account (automatic signing turns it on at archive when the entitlement
+      is present). The team is `6X8BZ996MA`.

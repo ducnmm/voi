@@ -8,6 +8,7 @@ enum A11y {
     }
 
     enum Login {
+        static let apple = "login.apple"
         static let google = "login.google"
         static let dev = "login.dev"
     }

@@ -65,6 +65,31 @@ export const openApiDocument = {
         }
       }
     },
+    "/auth/apple": {
+      post: {
+        security: [],
+        summary: "Sign in with Apple",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["identityToken"],
+                properties: {
+                  identityToken: { type: "string" },
+                  fullName: { type: "string" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "201": { description: "Authenticated user and token pair" },
+          "401": { description: "Invalid Apple token" }
+        }
+      }
+    },
     "/auth/dev": {
       post: {
         security: [],

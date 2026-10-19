@@ -174,6 +174,100 @@ describe("session create / RSVP / payment / lineup", () => {
   });
 });
 
+describe("session reminders", () => {
+  it("keeps a single reminder when join is sent again", async () => {
+    const host = await devLogin(app, "rem_host@voi.test");
+    const groupId = await createGroup(app, host.token);
+    const session = await createSession(app, host.token, groupId);
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const res = await app.inject({
+        method: "POST",
+        url: `/v1/sessions/${session.id}/rsvp`,
+        headers: auth(host.token),
+        payload: { status: "JOINED" }
+      });
+      expect(res.statusCode).toBe(200);
+    }
+
+    const rows = await prisma.notification.findMany({
+      where: { sessionId: session.id, userId: host.userId }
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      type: "SESSION_REMINDER",
+      deliveryStatus: "PENDING"
+    });
+
+    const list = await app.inject({
+      method: "GET",
+      url: "/v1/notifications",
+      headers: auth(host.token)
+    });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().notifications).toHaveLength(1);
+  });
+
+  it("hides a cancelled reminder and shows one again after rejoining", async () => {
+    const host = await devLogin(app, "rem_hide_host@voi.test");
+    const groupId = await createGroup(app, host.token);
+    const session = await createSession(app, host.token, groupId);
+    const player = await devLogin(app, "rem_hide_player@voi.test");
+
+    const joined = await app.inject({
+      method: "POST",
+      url: `/v1/sessions/${session.id}/rsvp`,
+      headers: auth(player.token),
+      payload: { status: "JOINED" }
+    });
+    expect(joined.statusCode).toBe(200);
+
+    const left = await app.inject({
+      method: "POST",
+      url: `/v1/sessions/${session.id}/rsvp`,
+      headers: auth(player.token),
+      payload: { status: "DECLINED" }
+    });
+    expect(left.statusCode).toBe(200);
+
+    const hidden = await app.inject({
+      method: "GET",
+      url: "/v1/notifications",
+      headers: auth(player.token)
+    });
+    expect(hidden.json().notifications).toHaveLength(0);
+
+    const badges = await app.inject({
+      method: "GET",
+      url: "/v1/me/badges",
+      headers: auth(player.token)
+    });
+    expect(badges.json().alertsUnread).toBe(0);
+
+    const rejoined = await app.inject({
+      method: "POST",
+      url: `/v1/sessions/${session.id}/rsvp`,
+      headers: auth(player.token),
+      payload: { status: "JOINED" }
+    });
+    expect(rejoined.statusCode).toBe(200);
+
+    const rows = await prisma.notification.findMany({
+      where: { sessionId: session.id, userId: player.userId }
+    });
+    expect(rows.filter((row) => row.deliveryStatus === "CANCELLED").length).toBeGreaterThan(0);
+    expect(rows.filter((row) => row.deliveryStatus === "PENDING")).toHaveLength(1);
+
+    const list = await app.inject({
+      method: "GET",
+      url: "/v1/notifications",
+      headers: auth(player.token)
+    });
+    expect(list.json().notifications).toHaveLength(1);
+    expect(list.json().notifications[0].type).toBe("SESSION_REMINDER");
+  });
+});
+
 describe("notifications read state", () => {
   it("marks a notification as read", async () => {
     const host = await devLogin(app, "n_host@voi.test");

@@ -22,6 +22,7 @@ final class SessionDetailViewModel: ObservableObject {
     private var api: APIClient?
     private var authSession: AuthSession?
     private var token: String? { authSession?.token }
+    private var isUpdatingRsvp = false
 
     /// Supplies the API client + session once the environment is available
     /// (environment objects aren't accessible from the View's initializer).
@@ -83,6 +84,10 @@ final class SessionDetailViewModel: ObservableObject {
     func decline() async { await setRSVP(.declined) }
 
     private func setRSVP(_ status: RsvpStatus) async {
+        if isUpdatingRsvp || myStatus == status { return }
+        isUpdatingRsvp = true
+        defer { isUpdatingRsvp = false }
+
         let previous = session
         session.setRSVP(status, for: currentPlayer) // optimistic
         guard let api, let token else { return }

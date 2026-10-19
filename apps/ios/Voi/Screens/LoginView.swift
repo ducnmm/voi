@@ -1,11 +1,13 @@
 import SwiftUI
+import AuthenticationServices
 import GoogleSignIn
 
-/// Minimal sign-in screen: a blank background with a single circular Google
-/// button in the centre and nothing else.
+/// Sign-in screen. Sign in with Apple is the same width as Google so the
+/// two options are equally prominent (App Store guideline 4.8).
 struct LoginView: View {
     let onLogin: () -> Void
     @EnvironmentObject private var environment: AppEnvironment
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isSigningIn = false
     @State private var errorMessage: String?
 
@@ -14,22 +16,35 @@ struct LoginView: View {
             VoiColor.background
                 .ignoresSafeArea()
 
-            VStack(spacing: VoiSpacing.lg) {
+            VStack(spacing: VoiSpacing.md) {
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    Task { await finishAppleSignIn(result) }
+                }
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .disabled(isSigningIn)
+                .accessibilityIdentifier(A11y.Login.apple)
+
                 Button {
                     Task { await signInWithGoogle() }
                 } label: {
-                    AsyncImage(url: URL(string: "https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png")) { phase in
-                        if let image = phase.image {
-                            image.resizable().scaledToFit()
-                        } else {
-                            GoogleLogo() // fallback while loading / offline
-                        }
+                    HStack(spacing: VoiSpacing.sm) {
+                        GoogleLogo()
+                            .frame(width: 18, height: 18)
+                        Text("Sign in with Google")
+                            .font(.system(size: 17, weight: .medium))
                     }
-                    .frame(width: 40, height: 40)
-                    .frame(width: 84, height: 84)
-                    .background(VoiColor.surface, in: Circle())
-                    .overlay(Circle().stroke(VoiColor.line, lineWidth: 1))
-                    .shadow(color: VoiColor.ink.opacity(0.12), radius: 14, x: 0, y: 6)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .foregroundStyle(VoiColor.ink)
+                    .background(VoiColor.surface, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(VoiColor.line, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
                 .disabled(isSigningIn)
@@ -45,6 +60,8 @@ struct LoginView: View {
                     .disabled(isSigningIn)
                 }
             }
+            .frame(maxWidth: 360)
+            .padding(.horizontal, VoiSpacing.xl)
         }
         .alert("Sign-in failed", isPresented: Binding(
             get: { errorMessage != nil },
@@ -76,6 +93,47 @@ struct LoginView: View {
         }
     }
 
+    private func finishAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
+        guard !isSigningIn else { return }
+        switch result {
+        case .failure(let error):
+            let nsError = error as NSError
+            if nsError.domain == ASAuthorizationError.errorDomain,
+               nsError.code == ASAuthorizationError.canceled.rawValue {
+                return
+            }
+            errorMessage = error.localizedDescription
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let identityToken = String(data: tokenData, encoding: .utf8)
+            else {
+                errorMessage = "Apple did not return a sign-in token."
+                return
+            }
+            let name = [credential.fullName?.givenName, credential.fullName?.familyName]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+            isSigningIn = true
+            defer { isSigningIn = false }
+            do {
+                let response = try await environment.apiClient.appleLogin(
+                    identityToken: identityToken,
+                    fullName: name.isEmpty ? nil : name
+                )
+                environment.authSession.signIn(tokens: response)
+                onLogin()
+            } catch {
+                if let apiError = error as? APIErrorResponse {
+                    errorMessage = apiError.error.message
+                } else {
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
     private func signInWithGoogle() async {
         guard !isSigningIn,
               let rootViewController = UIApplication.shared.firstKeyWindow?.rootViewController
@@ -86,7 +144,7 @@ struct LoginView: View {
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
             guard let idToken = result.user.idToken?.tokenString else { return }
             let response = try await environment.apiClient.googleLogin(idToken: idToken)
-            environment.authSession.signIn(google: response)
+            environment.authSession.signIn(tokens: response)
             onLogin()
         } catch {
             let nsError = error as NSError

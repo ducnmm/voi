@@ -52,7 +52,9 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
     const groupIds = memberships.map((row) => row.groupId);
 
     const [alertsUnread, sessions] = await Promise.all([
-      prisma.notification.count({ where: { userId, readAt: null } }),
+      prisma.notification.count({
+        where: { userId, readAt: null, deliveryStatus: { not: "CANCELLED" } }
+      }),
       groupIds.length > 0
         ? prisma.session.findMany({
             where: { groupId: { in: groupIds } },
@@ -104,7 +106,7 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
     const userId = getAuthenticatedUserId(request);
 
     const notifications = await prisma.notification.findMany({
-      where: { userId },
+      where: { userId, deliveryStatus: { not: "CANCELLED" } },
       include: {
         session: {
           select: {

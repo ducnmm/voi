@@ -30,6 +30,17 @@ struct GoogleAuthResponse: Codable {
     let user: UserProfile
 }
 
+struct AppleLoginRequest: Codable {
+    let identityToken: String
+    let fullName: String?
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(identityToken, forKey: .identityToken)
+        try container.encodeIfPresent(fullName, forKey: .fullName)
+    }
+}
+
 struct RefreshRequest: Codable {
     let refreshToken: String
 }

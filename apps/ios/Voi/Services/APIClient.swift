@@ -44,6 +44,16 @@ final class APIClient: @unchecked Sendable {
         )
     }
 
+    func appleLogin(identityToken: String, fullName: String?) async throws -> GoogleAuthResponse {
+        try await send(
+            APIRequest(
+                method: .post,
+                path: "auth/apple",
+                body: AppleLoginRequest(identityToken: identityToken, fullName: fullName)
+            )
+        )
+    }
+
     func refreshSession(refreshToken: String) async throws -> RefreshResponse {
         try await send(
             APIRequest(

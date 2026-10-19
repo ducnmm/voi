@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft — Google shipped; Apple pending a paid Apple Developer account.
+Accepted — Google and Sign in with Apple both issue a token pair.
 
 ## Problem
 
@@ -27,14 +27,17 @@ access token plus a rotating, revocable refresh token.
 - `POST /v1/auth/refresh` — rotate: revoke the presented refresh token, issue a
   new access + refresh pair.
 - `POST /v1/auth/logout` — revoke a refresh token.
-- `POST /v1/auth/apple` — endpoint exists but returns 501 until the Apple
-  Developer account + verification are configured.
+- `POST /v1/auth/apple` — verify the iOS identity token (audience =
+  `APPLE_BUNDLE_ID`, default `com.voi.app`) against Apple's JWKS, upsert the
+  user + `AuthIdentity`, return `{ accessToken, refreshToken, user }`.
+  A later login may omit email; the first login must include a verified one.
 - Access token TTL 15m; refresh token 30 days, stored SHA-256-hashed.
 
-## Out of Scope (blocked on a paid Apple Developer account)
+## Out of Scope
 
-- Sign in with Apple verification (needs the App ID capability + bundle audience).
 - Email/password (not planned).
+- Enabling the App ID capability in Apple Developer (signing does this when
+  the `com.apple.developer.applesignin` entitlement is archived).
 
 ## Primary Flow
 

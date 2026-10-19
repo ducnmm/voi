@@ -18,11 +18,16 @@ import {
   resetDb
 } from "../helpers.js";
 import { verifyGoogleIdToken } from "../../src/services/identity/google.js";
+import { verifyAppleIdentityToken } from "../../src/services/identity/apple.js";
 
 vi.mock("../../src/services/identity/google.js", () => ({
   verifyGoogleIdToken: vi.fn()
 }));
+vi.mock("../../src/services/identity/apple.js", () => ({
+  verifyAppleIdentityToken: vi.fn()
+}));
 const mockVerify = vi.mocked(verifyGoogleIdToken);
+const mockApple = vi.mocked(verifyAppleIdentityToken);
 
 let app: FastifyInstance;
 
@@ -184,15 +189,82 @@ describe("refresh + logout", () => {
   });
 });
 
+function apple(identityToken: string, fullName?: string) {
+  return app.inject({
+    method: "POST",
+    url: "/v1/auth/apple",
+    payload: fullName ? { identityToken, fullName } : { identityToken }
+  });
+}
+
 describe("POST /auth/apple", () => {
-  it("returns 501 until Apple Sign-In is configured", async () => {
-    const res = await app.inject({
-      method: "POST",
-      url: "/v1/auth/apple",
-      payload: { identityToken: "x" }
+  it("creates the user from a verified Apple identity", async () => {
+    mockApple.mockResolvedValue({
+      sub: "apple-1",
+      email: "ada@privaterelay.appleid.com"
     });
-    expect(res.statusCode).toBe(501);
-    expect(res.json().error.code).toBe("NOT_IMPLEMENTED");
+
+    const res = await apple("valid-token", "Ada Lovelace");
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.accessToken).toBeTruthy();
+    expect(body.refreshToken).toBeTruthy();
+    expect(body.user.email).toBe("ada@privaterelay.appleid.com");
+    expect(body.user.displayName).toBe("Ada Lovelace");
+    expect(mockApple).toHaveBeenCalledWith("valid-token", "com.voi.app");
+
+    const me = await app.inject({
+      method: "GET",
+      url: "/v1/me",
+      headers: auth(body.accessToken)
+    });
+    expect(me.statusCode).toBe(200);
+    expect(await prisma.authIdentity.count()).toBe(1);
+  });
+
+  it("returns the same user when Apple omits the email on a later login", async () => {
+    mockApple.mockResolvedValueOnce({
+      sub: "apple-2",
+      email: "repeat@privaterelay.appleid.com"
+    });
+    const first = (await apple("t", "Ada")).json();
+
+    mockApple.mockResolvedValueOnce({ sub: "apple-2" });
+    const second = await apple("t");
+    expect(second.statusCode).toBe(201);
+    expect(second.json().user.id).toBe(first.user.id);
+    expect(await prisma.user.count()).toBe(1);
+    expect(await prisma.authIdentity.count()).toBe(1);
+  });
+
+  it("links Apple to an existing account with the same email", async () => {
+    mockVerify.mockResolvedValue({
+      sub: "g-link",
+      email: "shared@voi.test",
+      name: "Shared"
+    });
+    const googleUser = (await google("t")).json();
+
+    mockApple.mockResolvedValue({
+      sub: "apple-link",
+      email: "shared@voi.test"
+    });
+    const appleUser = (await apple("apple-token", "Ignored")).json();
+    expect(appleUser.user.id).toBe(googleUser.user.id);
+    expect(appleUser.user.displayName).toBe("Shared");
+    expect(await prisma.user.count()).toBe(1);
+    expect(await prisma.authIdentity.count()).toBe(2);
+  });
+
+  it("rejects an invalid token and a first login with no email", async () => {
+    mockApple.mockRejectedValueOnce(new Error("bad token"));
+    expect((await apple("nope")).statusCode).toBe(401);
+
+    mockApple.mockResolvedValueOnce({ sub: "apple-new" });
+    const missingEmail = await apple("no-email");
+    expect(missingEmail.statusCode).toBe(401);
+    expect(missingEmail.json().error.message).toMatch(/email/);
+    expect(await prisma.user.count()).toBe(0);
   });
 });
 

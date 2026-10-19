@@ -14,6 +14,7 @@ final class OnboardingAndAuthUITests: VoiUITestCase {
             query(A11y.Login.google).waitForExistence(timeout: 8),
             "Onboarding should land on the login screen"
         )
+        XCTAssertTrue(query(A11y.Login.apple).exists)
         XCTAssertTrue(query(A11y.Login.dev).exists)
     }
 
@@ -22,6 +23,7 @@ final class OnboardingAndAuthUITests: VoiUITestCase {
 
         let google = waitFor(A11y.Login.google, timeout: 10)
         XCTAssertTrue(google.exists)
+        XCTAssertTrue(query(A11y.Login.apple).exists)
         XCTAssertTrue(query(A11y.Login.dev).exists)
         XCTAssertFalse(tabButton("Sessions").exists)
     }
