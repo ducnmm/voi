@@ -5,7 +5,7 @@ import type {
   PaymentStatus,
   RsvpStatus,
   SessionVisibility,
-  SkillLevel
+  SkillLevel,
 } from "@voi/shared";
 
 export interface UserProfile {
@@ -17,7 +17,9 @@ export interface UserProfile {
 }
 
 export interface AuthResponse {
-  token: string;
+  token?: string;
+  accessToken: string;
+  refreshToken: string;
   user: UserProfile;
 }
 
@@ -80,6 +82,7 @@ export interface SessionParticipant {
   waitlistPosition: number | null;
   paymentStatus: PaymentStatus;
   joinedAt: string | null;
+  checkedInAt: string | null;
   user: {
     id: string;
     displayName: string;
@@ -127,6 +130,11 @@ export interface SessionDetail {
   updatedAt: string;
   group: { id: string; name: string };
   inviteUrlToken: string | null;
+  imageUrls: string[];
+  feePerPlayerVnd: number | null;
+  costTrackingEnabled: boolean;
+  venueLat: number | null;
+  venueLng: number | null;
   summary: SessionSummary;
   participants: SessionParticipant[];
   courts: Court[];
@@ -137,4 +145,52 @@ export interface InviteDetail {
   token: string;
   group: { id: string; name: string } | null;
   session: SessionDetail | null;
+}
+
+export type SessionCard = Omit<SessionDetail, "participants" | "courts">;
+export type PublicUser = Omit<UserProfile, "email">;
+export interface Person extends PublicUser {
+  role: "host" | "player";
+  isHost: boolean;
+  activityCount: number;
+  hostedCount: number;
+  averageRating: number | null;
+  reviewCount: number;
+}
+export interface Review {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  author: PublicUser;
+}
+export interface ChatMessage {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: PublicUser;
+}
+export interface AppNotification {
+  id: string;
+  type: string;
+  readAt: string | null;
+  createdAt: string;
+  session: {
+    id: string;
+    title: string | null;
+    startsAt: string;
+    venueName: string;
+  } | null;
+}
+export interface NotificationPreference {
+  remindersEnabled: boolean;
+  statusChangesEnabled: boolean;
+  waitlistEnabled: boolean;
+  reminderLeadMinutes: number;
+}
+export interface MatchResult {
+  id: string;
+  label: string;
+  scoreA: number;
+  scoreB: number;
 }

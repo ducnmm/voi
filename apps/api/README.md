@@ -45,7 +45,7 @@ The API listens on `http://localhost:43187` by default (or `PORT` / `API_PORT`).
 
 ## Railway
 
-The repo root `railway.json` is the live deploy config (Dockerfile builder, `/health`, restart policy). Do not `railway config apply` `.railway/railway.ts`. The container runs `prisma migrate deploy` then `node apps/api/dist/server.js`.
+The production `api` service deploys when `main` is pushed to `ducnmm/voi`. The repo root `railway.json` is the live deploy config (Dockerfile builder, `/health`, restart policy). Do not `railway config apply` `.railway/railway.ts`. The container runs `prisma migrate deploy` then `node apps/api/dist/server.js`.
 
 Required production variables:
 

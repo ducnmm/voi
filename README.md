@@ -6,7 +6,7 @@ The product direction is:
 
 > A minimal, beautifully designed scheduling app for badminton groups: create a session, invite players, confirm attendance, handle waitlists, organize courts, and split costs.
 
-The primary client is the SwiftUI iOS app. The Fastify API is the source of truth. A Next.js tree still lives under `apps/web` but is **not** the product path.
+The primary client is the SwiftUI iOS app. The Fastify API is the source of truth. The responsive Next.js web client in `apps/web` shares the API, accounts and design language with iOS.
 
 ## Project Layout
 
@@ -14,7 +14,7 @@ The primary client is the SwiftUI iOS app. The Fastify API is the source of trut
 - `apps/api`: TypeScript API (Fastify + Prisma + Postgres).
 - `packages/shared`: shared TypeScript contracts.
 - `docs`: product, architecture, and feature specs.
-- `apps/web`: leftover Next.js app — not in current scope.
+- `apps/web`: responsive browser client for phones, tablets and computers.
 
 ## Local Development
 
@@ -24,6 +24,7 @@ docker compose up -d postgres redis
 pnpm db:migrate
 pnpm db:seed
 pnpm dev          # API on http://localhost:43187
+pnpm dev:web      # Web on http://localhost:43188 (separate terminal)
 ```
 
 Versioned routes live under `/v1`. Postgres is on host port `55487`, Redis on `55479`. Point the iOS simulator at `http://localhost:43187/v1` (or `VOI_API_BASE_URL`).
@@ -64,7 +65,7 @@ pnpm verify
 
 ## Product Constraints
 
-- Native iOS is the only client in scope.
+- Native iOS and responsive web use the same backend and accounts.
 - Start with badminton.
 - Group is a roster; a session is one play.
 - Start with group scheduling, not venue booking.

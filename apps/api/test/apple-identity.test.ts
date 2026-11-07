@@ -2,7 +2,7 @@ import { generateKeyPairSync, sign, type KeyObject } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearAppleKeyCache,
-  verifyAppleIdentityToken
+  verifyAppleIdentityToken,
 } from "../src/services/identity/apple.js";
 
 const AUDIENCE = "com.voi.app";
@@ -16,14 +16,18 @@ function token(
   privateKey: KeyObject,
   kid: string,
   payload: Record<string, unknown>,
-  header: Record<string, unknown> = { alg: "RS256", kid }
+  header: Record<string, unknown> = { alg: "RS256", kid },
 ): string {
   const headerPart = Buffer.from(JSON.stringify(header)).toString("base64url");
-  const payloadPart = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signed = `${headerPart}.${payloadPart}`;
-  const signature = sign("RSA-SHA256", Buffer.from(signed), privateKey).toString(
-    "base64url"
+  const payloadPart = Buffer.from(JSON.stringify(payload)).toString(
+    "base64url",
   );
+  const signed = `${headerPart}.${payloadPart}`;
+  const signature = sign(
+    "RSA-SHA256",
+    Buffer.from(signed),
+    privateKey,
+  ).toString("base64url");
   return `${signed}.${signature}`;
 }
 
@@ -35,7 +39,7 @@ function identityPayload(overrides: Record<string, unknown> = {}) {
     sub: "apple-sub-1",
     email: "ada@privaterelay.appleid.com",
     email_verified: true,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -44,8 +48,8 @@ function stubKeys(keys: unknown[]) {
     "fetch",
     vi.fn(async () => ({
       ok: true,
-      json: async () => ({ keys })
-    }))
+      json: async () => ({ keys }),
+    })),
   );
 }
 
@@ -58,24 +62,24 @@ afterEach(() => {
 describe("verifyAppleIdentityToken", () => {
   it("accepts a token signed by Apple's published key", async () => {
     const { publicKey, privateKey } = generateKeyPairSync("rsa", {
-      modulusLength: 2048
+      modulusLength: 2048,
     });
     stubKeys([jwkFor(publicKey, "key-1")]);
 
     const identity = await verifyAppleIdentityToken(
       token(privateKey, "key-1", identityPayload()),
-      AUDIENCE
+      AUDIENCE,
     );
 
     expect(identity).toEqual({
       sub: "apple-sub-1",
-      email: "ada@privaterelay.appleid.com"
+      email: "ada@privaterelay.appleid.com",
     });
   });
 
   it("accepts email_verified as the string true and omits a missing email", async () => {
     const { publicKey, privateKey } = generateKeyPairSync("rsa", {
-      modulusLength: 2048
+      modulusLength: 2048,
     });
     stubKeys([jwkFor(publicKey, "key-1")]);
 
@@ -83,9 +87,9 @@ describe("verifyAppleIdentityToken", () => {
       token(
         privateKey,
         "key-1",
-        identityPayload({ email_verified: "true", email: "a@voi.test" })
+        identityPayload({ email_verified: "true", email: "a@voi.test" }),
       ),
-      AUDIENCE
+      AUDIENCE,
     );
     expect(withString.email).toBe("a@voi.test");
 
@@ -94,33 +98,33 @@ describe("verifyAppleIdentityToken", () => {
       token(
         privateKey,
         "key-1",
-        identityPayload({ email: undefined, email_verified: undefined })
+        identityPayload({ email: undefined, email_verified: undefined }),
       ),
-      AUDIENCE
+      AUDIENCE,
     );
     expect(withoutEmail).toEqual({ sub: "apple-sub-1" });
   });
 
   it("refetches keys when the token kid is not in the cache", async () => {
     const { publicKey, privateKey } = generateKeyPairSync("rsa", {
-      modulusLength: 2048
+      modulusLength: 2048,
     });
     const other = generateKeyPairSync("rsa", { modulusLength: 2048 }).publicKey;
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ keys: [jwkFor(other, "old")] })
+        json: async () => ({ keys: [jwkFor(other, "old")] }),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ keys: [jwkFor(publicKey, "new")] })
+        json: async () => ({ keys: [jwkFor(publicKey, "new")] }),
       });
     vi.stubGlobal("fetch", fetchMock);
 
     const identity = await verifyAppleIdentityToken(
       token(privateKey, "new", identityPayload()),
-      AUDIENCE
+      AUDIENCE,
     );
 
     expect(identity.sub).toBe("apple-sub-1");
@@ -129,7 +133,7 @@ describe("verifyAppleIdentityToken", () => {
 
   it("rejects a bad signature, audience, issuer, expiry, and unverified email", async () => {
     const { publicKey, privateKey } = generateKeyPairSync("rsa", {
-      modulusLength: 2048
+      modulusLength: 2048,
     });
     stubKeys([jwkFor(publicKey, "key-1")]);
     const valid = token(privateKey, "key-1", identityPayload());
@@ -137,44 +141,93 @@ describe("verifyAppleIdentityToken", () => {
     const tampered = `${header}.${body}.${"a".repeat(32)}`;
 
     await expect(verifyAppleIdentityToken(tampered, AUDIENCE)).rejects.toThrow(
-      /signature/
+      /signature/,
     );
     await expect(
       verifyAppleIdentityToken(
         token(privateKey, "key-1", identityPayload({ aud: "com.other.app" })),
-        AUDIENCE
-      )
+        AUDIENCE,
+      ),
     ).rejects.toThrow(/audience/);
     await expect(
       verifyAppleIdentityToken(
-        token(privateKey, "key-1", identityPayload({ iss: "https://evil.example" })),
-        AUDIENCE
-      )
+        token(
+          privateKey,
+          "key-1",
+          identityPayload({ iss: "https://evil.example" }),
+        ),
+        AUDIENCE,
+      ),
     ).rejects.toThrow(/issuer/);
     await expect(
       verifyAppleIdentityToken(
         token(
           privateKey,
           "key-1",
-          identityPayload({ exp: Math.floor(Date.now() / 1000) - 120 })
+          identityPayload({ exp: Math.floor(Date.now() / 1000) - 120 }),
         ),
-        AUDIENCE
-      )
+        AUDIENCE,
+      ),
     ).rejects.toThrow(/expired/);
     await expect(
       verifyAppleIdentityToken(
         token(privateKey, "key-1", identityPayload({ email_verified: false })),
-        AUDIENCE
-      )
+        AUDIENCE,
+      ),
     ).rejects.toThrow(/verified/);
     await expect(
-      verifyAppleIdentityToken("not-a-jwt", AUDIENCE)
+      verifyAppleIdentityToken("not-a-jwt", AUDIENCE),
     ).rejects.toThrow(/Invalid Apple token/);
     await expect(
       verifyAppleIdentityToken(
-        token(privateKey, "key-1", identityPayload(), { alg: "none", kid: "key-1" }),
-        AUDIENCE
-      )
+        token(privateKey, "key-1", identityPayload(), {
+          alg: "none",
+          kid: "key-1",
+        }),
+        AUDIENCE,
+      ),
     ).rejects.toThrow(/header/);
+  });
+  it("accepts the configured web service ID and validates its nonce", async () => {
+    const { publicKey, privateKey } = generateKeyPairSync("rsa", {
+      modulusLength: 2048,
+    });
+    stubKeys([jwkFor(publicKey, "web-key")]);
+    const webToken = token(
+      privateKey,
+      "web-key",
+      identityPayload({
+        aud: "com.voi.web",
+        nonce: "nonce-from-the-web-client",
+      }),
+    );
+    await expect(
+      verifyAppleIdentityToken(
+        webToken,
+        [AUDIENCE, "com.voi.web"],
+        "nonce-from-the-web-client",
+      ),
+    ).resolves.toMatchObject({ sub: "apple-sub-1" });
+    await expect(
+      verifyAppleIdentityToken(
+        webToken,
+        [AUDIENCE, "com.voi.web"],
+        "a-different-nonce",
+      ),
+    ).rejects.toThrow(/nonce/);
+    await expect(
+      verifyAppleIdentityToken(
+        webToken,
+        [AUDIENCE, "com.other.web"],
+        "nonce-from-the-web-client",
+      ),
+    ).rejects.toThrow(/audience/);
+    await expect(
+      verifyAppleIdentityToken(
+        token(privateKey, "web-key", identityPayload({ aud: "com.voi.web" })),
+        [AUDIENCE, "com.voi.web"],
+        "required-nonce",
+      ),
+    ).rejects.toThrow(/nonce/);
   });
 });

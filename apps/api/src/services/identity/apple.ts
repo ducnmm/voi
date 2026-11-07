@@ -26,18 +26,14 @@ export function clearAppleKeyCache(): void {
  */
 export async function verifyAppleIdentityToken(
   identityToken: string,
-  audience: string
+  audience: string | string[],
+  expectedNonce?: string,
 ): Promise<AppleIdentity> {
   const parts = identityToken.split(".");
   const headerPart = parts[0];
   const payloadPart = parts[1];
   const signaturePart = parts[2];
-  if (
-    parts.length !== 3 ||
-    !headerPart ||
-    !payloadPart ||
-    !signaturePart
-  ) {
+  if (parts.length !== 3 || !headerPart || !payloadPart || !signaturePart) {
     throw new Error("Invalid Apple token");
   }
 
@@ -61,6 +57,8 @@ export async function verifyAppleIdentityToken(
   if (!audienceMatches(payload.aud, audience)) {
     throw new Error("Invalid Apple token audience");
   }
+  if (expectedNonce && payload.nonce !== expectedNonce)
+    throw new Error("Invalid Apple token nonce");
   const now = Math.floor(Date.now() / 1000);
   if (typeof payload.exp !== "number" || payload.exp + EXPIRY_SKEW_SEC <= now) {
     throw new Error("Apple token expired");
@@ -73,12 +71,16 @@ export async function verifyAppleIdentityToken(
 }
 
 function publicKeyFromJwk(jwk: AppleJwk): KeyObject {
-  if (jwk.kty !== "RSA" || typeof jwk.n !== "string" || typeof jwk.e !== "string") {
+  if (
+    jwk.kty !== "RSA" ||
+    typeof jwk.n !== "string" ||
+    typeof jwk.e !== "string"
+  ) {
     throw new Error("Invalid Apple signing key");
   }
   return createPublicKey({
     key: { kty: "RSA", n: jwk.n, e: jwk.e },
-    format: "jwk"
+    format: "jwk",
   });
 }
 
@@ -125,11 +127,12 @@ function decodePart(part: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function audienceMatches(aud: unknown, expected: string): boolean {
+function audienceMatches(aud: unknown, expected: string | string[]): boolean {
+  const allowed = Array.isArray(expected) ? expected : [expected];
   if (typeof aud === "string") {
-    return aud === expected;
+    return allowed.includes(aud);
   }
-  return Array.isArray(aud) && aud.some((value) => value === expected);
+  return Array.isArray(aud) && aud.some((value) => allowed.includes(value));
 }
 
 function verifiedEmail(payload: Record<string, unknown>): string | undefined {

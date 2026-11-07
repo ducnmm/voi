@@ -35,3 +35,11 @@ next-env.d.ts
 
 # Uploaded images (local dev storage)
 apps/api/uploads/
+
+# Browser regression artifacts
+apps/web/test-results/
+apps/web/playwright-report/
+
+# Local deployment/QA scratch
+scratch/
+.railway-config-pull-*/

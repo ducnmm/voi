@@ -211,7 +211,7 @@ describe("POST /auth/apple", () => {
     expect(body.refreshToken).toBeTruthy();
     expect(body.user.email).toBe("ada@privaterelay.appleid.com");
     expect(body.user.displayName).toBe("Ada Lovelace");
-    expect(mockApple).toHaveBeenCalledWith("valid-token", "com.voi.app");
+    expect(mockApple).toHaveBeenCalledWith("valid-token", ["com.voi.app"], undefined);
 
     const me = await app.inject({
       method: "GET",

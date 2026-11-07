@@ -1,171 +1,147 @@
 "use client";
-
-import { useCallback, useEffect, useState } from "react";
+import { Select } from "@/components/select";
+import { useI18n } from "@/lib/i18n";
 import Link from "next/link";
-import type { SkillLevel } from "@voi/shared";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { ApiError, api } from "@/lib/api-client";
+import { request } from "@/lib/api-client";
+import { useResource } from "@/lib/use-resource";
 import type { GroupSummary } from "@/lib/api-types";
-import {
-  Badge,
-  Button,
-  Card,
-  ErrorNote,
-  Field,
-  Input,
-  PageHeader,
-  Spinner
-} from "./ui";
-
-const SKILL_LEVELS: SkillLevel[] = ["OPEN", "BEGINNER", "INTERMEDIATE", "ADVANCED"];
-
+import { Icon } from "./icon";
+import { Title, Empty, skillLabels } from "./primitives";
+import { ErrorNote, Spinner } from "./ui";
 export function Dashboard() {
-  const { token, user } = useAuth();
-  const [groups, setGroups] = useState<GroupSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
+
+  const { token } = useAuth();
+  const resource = useResource<{ groups: GroupSummary[] }>("/groups");
   const [creating, setCreating] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!token) return;
-    setError(null);
-    try {
-      const result = await api.listGroups(token);
-      setGroups(result.groups);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not load groups.");
-      setGroups([]);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [skill, setSkill] = useState("OPEN");
+  const [busy, setBusy] = useState(false);
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title={`Hi, ${user?.displayName ?? "there"} 👋`}
-        subtitle="Your badminton groups and upcoming sessions."
+    <div className="stack">
+      <Title
+        title={t("Nhóm của tôi")}
         action={
-          <Button variant="secondary" onClick={() => setCreating((v) => !v)}>
-            {creating ? "Close" : "New group"}
-          </Button>
+          <button
+            className="btn btn-primary"
+            onClick={() => setCreating(!creating)}
+          >
+            <Icon name={creating ? "close" : "plus"} size={16} />
+            {creating ? t("Đóng") : t("Tạo nhóm")}
+          </button>
         }
       />
-
-      {creating ? (
-        <CreateGroupForm
-          onCreated={() => {
-            setCreating(false);
-            void load();
+      {resource.error && <ErrorNote message={resource.error} />}
+      {creating && (
+        <form
+          className="card stack form-section"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setBusy(true);
+            resource.setError("");
+            try {
+              await request("/groups", {
+                token,
+                method: "POST",
+                body: {
+                  name: name.trim(),
+                  description: description.trim() || undefined,
+                  defaultSkillLevel: skill,
+                },
+              });
+              setCreating(false);
+              setName("");
+              setDescription("");
+              await resource.reload();
+            } catch (err) {
+              resource.setError(
+                err instanceof Error ? err.message : t("Không thể tạo nhóm."),
+              );
+            } finally {
+              setBusy(false);
+            }
           }}
-        />
-      ) : null}
-
-      {error ? <ErrorNote message={error} /> : null}
-
-      {groups === null ? (
+        >
+          <h2>{t("Một nhóm mới, những kèo mới")}</h2>
+          <label>
+            {t("Tên nhóm")}
+            <input
+              required
+              maxLength={80}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("Hội cầu lông tối thứ Ba")}
+            />
+          </label>
+          <label>
+            {t("Mô tả")}
+            <input
+              maxLength={280}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t("Giới thiệu một chút về nhóm…")}
+            />
+          </label>
+          <label>
+            {t("Trình độ mặc định")}
+            <Select value={skill} onValueChange={(value) => setSkill(value)}>
+              {Object.entries(skillLabels).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {t(String(label))}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <button className="btn btn-primary" disabled={busy || !name.trim()}>
+            {busy ? t("Đang tạo…") : t("Tạo nhóm")}
+          </button>
+        </form>
+      )}
+      {resource.loading ? (
         <Spinner />
-      ) : groups.length === 0 ? (
-        <Card>
-          <p className="text-sm text-[var(--color-muted)]">
-            No groups yet. Create your first group to start scheduling sessions.
-          </p>
-        </Card>
+      ) : !resource.data?.groups.length ? (
+        <Empty icon="people" title={t("Nhóm đầu tiên của bạn")}>
+          {t("Tạo một nhóm, rủ những người bạn quen và bắt đầu lên kèo.")}
+        </Empty>
       ) : (
-        <div className="flex flex-col gap-3">
-          {groups.map((group) => (
-            <Link key={group.id} href={`/groups/${group.id}`}>
-              <Card className="transition-shadow hover:shadow-md">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="font-semibold">{group.name}</h2>
-                    {group.description ? (
-                      <p className="mt-0.5 text-sm text-[var(--color-muted)]">
-                        {group.description}
-                      </p>
-                    ) : null}
-                  </div>
-                  <Badge tone="blue">{group.defaultSkillLevel}</Badge>
-                </div>
-                <div className="mt-3 flex gap-4 text-xs text-[var(--color-muted)]">
-                  <span>{group.memberCount} members</span>
-                  {group.upcomingSessionCount !== undefined ? (
-                    <span>{group.upcomingSessionCount} upcoming</span>
-                  ) : null}
-                </div>
-              </Card>
+        <div className="feed-grid">
+          {resource.data.groups.map((group) => (
+            <Link
+              className="card stack"
+              key={group.id}
+              href={`/groups/${group.id}`}
+            >
+              <div className="row spread">
+                <span className="avatar">
+                  <Icon name="people" />
+                </span>
+                <Icon name="chevron" size={16} />
+              </div>
+              <div>
+                <h2>{group.name}</h2>
+                <p
+                  className="muted"
+                  style={{ fontSize: "var(--type-footnote)", lineHeight: "var(--leading-body)", marginTop: 8 }}
+                >
+                  {group.description ||
+                    t("Cùng nhau ra sân, cùng nhau tiến bộ.")}
+                </p>
+              </div>
+              <div className="row spread">
+                <span className="muted" style={{ fontSize: "var(--type-footnote)" }}>
+                  {group.memberCount} {t("thành viên")}
+                </span>
+                <span className="chip">
+                  {t(skillLabels[group.defaultSkillLevel])}
+                </span>
+              </div>
             </Link>
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-function CreateGroupForm({ onCreated }: { onCreated: () => void }) {
-  const { token } = useAuth();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [skillLevel, setSkillLevel] = useState<SkillLevel>("OPEN");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!token) return;
-    setError(null);
-    setSubmitting(true);
-    try {
-      await api.createGroup(token, {
-        name: name.trim(),
-        description: description.trim() || undefined,
-        defaultSkillLevel: skillLevel
-      });
-      onCreated();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not create group.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Card>
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <Field label="Group name">
-          <Input
-            required
-            value={name}
-            placeholder="Thursday Smashers"
-            onChange={(e) => setName(e.target.value)}
-          />
-        </Field>
-        <Field label="Description" hint="Optional">
-          <Input
-            value={description}
-            placeholder="Weekly doubles at District 7"
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </Field>
-        <Field label="Default skill level">
-          <select
-            className="rounded-xl border border-[var(--color-line)] bg-white px-3 py-2 text-sm"
-            value={skillLevel}
-            onChange={(e) => setSkillLevel(e.target.value as SkillLevel)}
-          >
-            {SKILL_LEVELS.map((level) => (
-              <option key={level} value={level}>
-                {level}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {error ? <ErrorNote message={error} /> : null}
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Creating…" : "Create group"}
-        </Button>
-      </form>
-    </Card>
   );
 }

@@ -32,6 +32,8 @@ const EnvSchema = z.object({
   CHAT_RATE_MAX: z.coerce.number().int().positive().default(20),
   CHAT_RATE_WINDOW_SEC: z.coerce.number().int().positive().default(10),
   GOOGLE_IOS_CLIENT_ID: z.string().optional(),
+  GOOGLE_WEB_CLIENT_ID: z.string().optional(),
+  APPLE_WEB_CLIENT_ID: z.string().optional(),
   APPLE_BUNDLE_ID: z.string().min(1).default("com.voi.app"),
   APNS_KEY_ID: z.string().optional(),
   APNS_TEAM_ID: z.string().optional(),

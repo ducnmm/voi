@@ -20,5 +20,15 @@
     "db:deploy": "pnpm --filter @voi/api db:deploy",
     "db:seed": "pnpm --filter @voi/api db:seed",
     "db:studio": "pnpm --filter @voi/api db:studio"
+  },
+  "devDependencies": {
+    "@railway/cli": "^5.71.0",
+    "railway": "3.16.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "^8.5.18",
+      "deepmerge-ts": "^8.0.0"
+    }
   }
 }

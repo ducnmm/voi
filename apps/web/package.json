@@ -8,23 +8,30 @@
     "build": "next build",
     "start": "next start --port 43188",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "next lint",
-    "test": "echo \"No web tests yet\""
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
+    "test:smoke": "node test/smoke.mjs",
+    "test:ui": "playwright test"
   },
   "dependencies": {
+    "@radix-ui/react-select": "^2.4.1",
     "@voi/shared": "workspace:*",
-    "motion": "^12.40.0",
-    "next": "^15.1.6",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "zod": "^3.25.76"
+    "leaflet": "1.9.4",
+    "motion": "^12.43.0",
+    "next": "^15.5.29",
+    "qrcode": "1.5.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.0.0",
-    "@types/node": "^22.17.2",
-    "@types/react": "^19.0.7",
-    "@types/react-dom": "^19.0.3",
-    "tailwindcss": "^4.0.0",
-    "typescript": "^5.9.2"
+    "@playwright/test": "^1.65.0",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^22.20.5",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^5.9.3"
   }
 }

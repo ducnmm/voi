@@ -5,7 +5,7 @@ import {
   DevLoginSchema,
   GoogleLoginSchema,
   RefreshTokenSchema,
-  UpdateProfileSchema
+  UpdateProfileSchema,
 } from "@voi/shared";
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
@@ -13,11 +13,11 @@ import { env } from "../config/env.js";
 import { conflict, notFound, unauthorized } from "../utils/api-error.js";
 import {
   verifyGoogleIdToken,
-  type GoogleIdentity
+  type GoogleIdentity,
 } from "../services/identity/google.js";
 import {
   verifyAppleIdentityToken,
-  type AppleIdentity
+  type AppleIdentity,
 } from "../services/identity/apple.js";
 import {
   findUserByIdentity,
@@ -25,7 +25,7 @@ import {
   issueRefreshToken,
   revokeRefreshToken,
   rotateRefreshToken,
-  upsertUserWithIdentity
+  upsertUserWithIdentity,
 } from "../services/auth-tokens.js";
 
 function presentUser(user: User) {
@@ -34,7 +34,7 @@ function presentUser(user: User) {
     email: user.email,
     displayName: user.displayName,
     avatarUrl: user.avatarUrl,
-    defaultSkillLevel: user.defaultSkillLevel
+    defaultSkillLevel: user.defaultSkillLevel,
   };
 }
 
@@ -56,7 +56,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const user = await prisma.user.upsert({
       where: { email: body.email },
       update: { displayName },
-      create: { email: body.email, displayName }
+      create: { email: body.email, displayName },
     });
 
     const accessToken = issueAccessToken(app, user.id);
@@ -65,7 +65,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       token: accessToken,
       accessToken,
       refreshToken,
-      user: presentUser(user)
+      user: presentUser(user),
     });
   });
 
@@ -76,7 +76,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     try {
       identity = await verifyAppleIdentityToken(
         body.identityToken,
-        env.APPLE_BUNDLE_ID
+        [env.APPLE_BUNDLE_ID, env.APPLE_WEB_CLIENT_ID].filter(
+          (value): value is string => Boolean(value),
+        ),
+        body.nonce,
       );
     } catch {
       throw unauthorized("Invalid Apple token");
@@ -93,7 +96,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           provider: "APPLE",
           providerSub: identity.sub,
           email: identity.email as string,
-          displayName: body.fullName
+          displayName: body.fullName,
         });
 
     const accessToken = issueAccessToken(app, user.id);
@@ -101,7 +104,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(201).send({
       accessToken,
       refreshToken,
-      user: presentUser(user)
+      user: presentUser(user),
     });
   });
 
@@ -121,7 +124,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       providerSub: identity.sub,
       email: identity.email,
       displayName: identity.name,
-      avatarUrl: identity.picture
+      avatarUrl: identity.picture,
     });
 
     const accessToken = issueAccessToken(app, user.id);
@@ -130,7 +133,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(201).send({
       accessToken,
       refreshToken,
-      user: presentUser(user)
+      user: presentUser(user),
     });
   });
 
@@ -163,7 +166,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.patch("/me", { preHandler: app.authenticate }, async (request) => {
     const userId = getAuthenticatedUserId(request);
     const body = UpdateProfileSchema.parse(request.body);
-    const user = await prisma.user.update({ where: { id: userId }, data: body });
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: body,
+    });
     return { user: presentUser(user) };
   });
 
@@ -174,21 +180,21 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       prisma.groupMember.count({
         where: {
           userId: { not: userId },
-          group: { createdByUserId: userId }
-        }
+          group: { createdByUserId: userId },
+        },
       }),
       prisma.sessionParticipant.count({
         where: {
           userId: { not: userId },
-          session: { hostUserId: userId }
-        }
-      })
+          session: { hostUserId: userId },
+        },
+      }),
     ]);
 
     if (otherGroupMembers > 0 || otherSessionParticipants > 0) {
       throw conflict(
         "Cancel hosted sessions and remove other members from your groups before deleting your account.",
-        { otherGroupMembers, otherSessionParticipants }
+        { otherGroupMembers, otherSessionParticipants },
       );
     }
 

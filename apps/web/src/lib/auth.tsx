@@ -1,96 +1,151 @@
 "use client";
-
+import { useI18n } from "@/lib/i18n";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useState
+  useState,
+  type ReactNode,
 } from "react";
-import type { ReactNode } from "react";
-import type { UserProfile } from "./api-types";
-import { api } from "./api-client";
-
-const TOKEN_KEY = "voi.token";
-const USER_KEY = "voi.user";
-
+import { api, request } from "./api-client";
+import type { AuthResponse, UserProfile } from "./api-types";
 interface AuthState {
   token: string | null;
   user: UserProfile | null;
   ready: boolean;
   signIn: (email: string, displayName?: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (credential?: string) => Promise<void>;
+  signInWithApple: (
+    identityToken: string,
+    nonce: string,
+    fullName?: string,
+  ) => Promise<void>;
   signOut: () => void;
+  updateUser: (user: UserProfile) => void;
 }
-
 const AuthContext = createContext<AuthState | null>(null);
-
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
+
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const storedToken = window.localStorage.getItem(TOKEN_KEY);
-    const storedUser = window.localStorage.getItem(USER_KEY);
-    if (storedToken) {
-      setToken(storedToken);
-    }
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser) as UserProfile);
-      } catch {
-        window.localStorage.removeItem(USER_KEY);
-      }
-    }
-    setReady(true);
+  const updateUser = useCallback((next: UserProfile) => {
+    localStorage.setItem("voi.user", JSON.stringify(next));
+    setUser(next);
   }, []);
-
-  const signIn = useCallback(async (email: string, displayName?: string) => {
-    const result = await api.devLogin(email, displayName);
-    window.localStorage.setItem(TOKEN_KEY, result.token);
-    window.localStorage.setItem(USER_KEY, JSON.stringify(result.user));
-    setToken(result.token);
-    setUser(result.user);
-  }, []);
-
-  // Prototype Google sign-in: creates a local mock session so the flow is
-  // clickable without a backend. Replace with real Google OAuth (NextAuth /
-  // backend OAuth callback) before launch — see docs.
-  const signInWithGoogle = useCallback(async () => {
-    const mockUser: UserProfile = {
-      id: "google-mock-user",
-      email: "ban@gmail.com",
-      displayName: "Bạn",
-      avatarUrl: null,
-      defaultSkillLevel: "INTERMEDIATE"
-    };
-    window.localStorage.setItem(TOKEN_KEY, "mock-google-token");
-    window.localStorage.setItem(USER_KEY, JSON.stringify(mockUser));
-    setToken("mock-google-token");
-    setUser(mockUser);
-  }, []);
-
-  const signOut = useCallback(() => {
-    window.localStorage.removeItem(TOKEN_KEY);
-    window.localStorage.removeItem(USER_KEY);
+  const clear = useCallback(() => {
+    ["voi.token", "voi.user", "voi.refresh"].forEach((key) =>
+      localStorage.removeItem(key),
+    );
     setToken(null);
     setUser(null);
   }, []);
-
-  const value = useMemo<AuthState>(
-    () => ({ token, user, ready, signIn, signInWithGoogle, signOut }),
-    [token, user, ready, signIn, signInWithGoogle, signOut]
+  useEffect(() => {
+    let active = true;
+    const stored = localStorage.getItem("voi.token");
+    if (stored && stored !== "mock-google-token") {
+      api
+        .me(stored)
+        .then(({ user }) => {
+          if (active) {
+            setToken(localStorage.getItem("voi.token") ?? stored);
+            updateUser(user);
+          }
+        })
+        .catch(() => {
+          if (active) clear();
+        })
+        .finally(() => {
+          if (active) setReady(true);
+        });
+    } else {
+      clear();
+      setReady(true);
+    }
+    window.addEventListener("voi:expired", clear);
+    return () => {
+      active = false;
+      window.removeEventListener("voi:expired", clear);
+    };
+  }, [clear, updateUser]);
+  const accept = useCallback(
+    (result: AuthResponse) => {
+      const access = result.accessToken ?? result.token;
+      if (!access) throw new Error(t("Thiếu phiên đăng nhập."));
+      localStorage.setItem("voi.token", access);
+      localStorage.setItem("voi.refresh", result.refreshToken);
+      setToken(access);
+      updateUser(result.user);
+    },
+    [updateUser],
   );
-
+  const signIn = useCallback(
+    async (email: string, displayName?: string) => {
+      accept(await api.devLogin(email, displayName));
+    },
+    [accept],
+  );
+  const signInWithGoogle = useCallback(
+    async (credential?: string) => {
+      if (!credential) throw new Error(t("Vui lòng chọn tài khoản Google."));
+      accept(
+        await request<AuthResponse>("/auth/google", {
+          method: "POST",
+          body: { idToken: credential },
+        }),
+      );
+    },
+    [accept],
+  );
+  const signInWithApple = useCallback(
+    async (identityToken: string, nonce: string, fullName?: string) => {
+      accept(
+        await request<AuthResponse>("/auth/apple", {
+          method: "POST",
+          body: { identityToken, nonce, fullName },
+        }),
+      );
+    },
+    [accept],
+  );
+  const signOut = useCallback(() => {
+    const refreshToken = localStorage.getItem("voi.refresh");
+    if (refreshToken)
+      void request("/auth/logout", {
+        method: "POST",
+        body: { refreshToken },
+      }).catch(() => undefined);
+    clear();
+  }, [clear]);
+  const value = useMemo(
+    () => ({
+      token,
+      user,
+      ready,
+      signIn,
+      signInWithGoogle,
+      signInWithApple,
+      signOut,
+      updateUser,
+    }),
+    [
+      token,
+      user,
+      ready,
+      signIn,
+      signInWithGoogle,
+      signInWithApple,
+      signOut,
+      updateUser,
+    ],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth(): AuthState {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+export function useAuth() {
+  const value = useContext(AuthContext);
+  if (!value) throw new Error("AuthProvider missing");
+  return value;
 }

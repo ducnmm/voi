@@ -6,7 +6,7 @@ export const SkillLevelSchema = z.enum([
   "BEGINNER",
   "INTERMEDIATE",
   "ADVANCED",
-  "OPEN"
+  "OPEN",
 ]);
 
 export const RsvpStatusSchema = z.enum([
@@ -14,19 +14,12 @@ export const RsvpStatusSchema = z.enum([
   "MAYBE",
   "DECLINED",
   "WAITLISTED",
-  "CANCELLED"
+  "CANCELLED",
 ]);
 
-export const PaymentStatusSchema = z.enum([
-  "NOT_REQUIRED",
-  "UNPAID",
-  "PAID"
-]);
+export const PaymentStatusSchema = z.enum(["NOT_REQUIRED", "UNPAID", "PAID"]);
 
-export const SessionVisibilitySchema = z.enum([
-  "PRIVATE_LINK",
-  "GROUP_ONLY"
-]);
+export const SessionVisibilitySchema = z.enum(["PRIVATE_LINK", "GROUP_ONLY"]);
 
 export type SkillLevel = z.infer<typeof SkillLevelSchema>;
 export type RsvpStatus = z.infer<typeof RsvpStatusSchema>;
@@ -37,7 +30,7 @@ export const CreateGroupSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(280).optional(),
   defaultVenueName: z.string().trim().max(120).optional(),
-  defaultSkillLevel: SkillLevelSchema.default("OPEN")
+  defaultSkillLevel: SkillLevelSchema.default("OPEN"),
 });
 
 export const CreateSessionSchema = z.object({
@@ -56,7 +49,7 @@ export const CreateSessionSchema = z.object({
   feePerPlayerVnd: z.number().int().min(0).optional(),
   venueLat: z.number().min(-90).max(90).optional(),
   venueLng: z.number().min(-180).max(180).optional(),
-  imageUrls: z.array(z.string().url().max(500)).max(6).optional()
+  imageUrls: z.array(z.string().url().max(500)).max(6).optional(),
 });
 
 export const UpdateSessionSchema = z.object({
@@ -75,7 +68,7 @@ export const UpdateSessionSchema = z.object({
   feePerPlayerVnd: z.number().int().min(0).nullable().optional(),
   venueLat: z.number().min(-90).max(90).nullable().optional(),
   venueLng: z.number().min(-180).max(180).nullable().optional(),
-  imageUrls: z.array(z.string().url().max(500)).max(6).optional()
+  imageUrls: z.array(z.string().url().max(500)).max(6).optional(),
 });
 
 export const SessionFeedQuerySchema = z.object({
@@ -92,7 +85,7 @@ export const SessionFeedQuerySchema = z.object({
     .transform((value) => value === "true"),
   sort: z.enum(["date", "price", "spots"]).default("date"),
   limit: z.coerce.number().int().min(1).max(100).default(50),
-  cursor: z.string().trim().min(1).optional()
+  cursor: z.string().trim().min(1).optional(),
 });
 
 export type SessionFeedQuery = z.infer<typeof SessionFeedQuerySchema>;
@@ -100,7 +93,7 @@ export type SessionFeedQuery = z.infer<typeof SessionFeedQuerySchema>;
 export const CreateMatchResultSchema = z.object({
   label: z.string().trim().min(1).max(40),
   scoreA: z.number().int().min(0).max(99),
-  scoreB: z.number().int().min(0).max(99)
+  scoreB: z.number().int().min(0).max(99),
 });
 
 export type CreateMatchResultInput = z.infer<typeof CreateMatchResultSchema>;
@@ -108,28 +101,29 @@ export type CreateMatchResultInput = z.infer<typeof CreateMatchResultSchema>;
 export const CreateReviewSchema = z.object({
   subjectId: z.string().trim().min(1),
   rating: z.number().int().min(1).max(5),
-  comment: z.string().trim().max(500).optional()
+  comment: z.string().trim().max(500).optional(),
 });
 
 export type CreateReviewInput = z.infer<typeof CreateReviewSchema>;
 
 export const SendMessageSchema = z.object({
-  body: z.string().trim().min(1).max(2000)
+  body: z.string().trim().min(1).max(2000),
 });
 
 export type SendMessageInput = z.infer<typeof SendMessageSchema>;
 
 export const GoogleLoginSchema = z.object({
-  idToken: z.string().min(1)
+  idToken: z.string().min(1),
 });
 
 export const AppleLoginSchema = z.object({
   identityToken: z.string().min(1).max(8192),
-  fullName: z.string().trim().min(1).max(80).optional()
+  nonce: z.string().min(16).max(128).optional(),
+  fullName: z.string().trim().min(1).max(80).optional(),
 });
 
 export const RefreshTokenSchema = z.object({
-  refreshToken: z.string().min(1)
+  refreshToken: z.string().min(1),
 });
 
 export type GoogleLoginInput = z.infer<typeof GoogleLoginSchema>;
@@ -138,28 +132,28 @@ export type RefreshTokenInput = z.infer<typeof RefreshTokenSchema>;
 
 export const DevLoginSchema = z.object({
   email: z.string().trim().email(),
-  displayName: z.string().trim().min(1).max(80).optional()
+  displayName: z.string().trim().min(1).max(80).optional(),
 });
 
 export const UpdateProfileSchema = z.object({
   displayName: z.string().trim().min(1).max(80).optional(),
   avatarUrl: z.string().trim().url().nullable().optional(),
-  defaultSkillLevel: SkillLevelSchema.optional()
+  defaultSkillLevel: SkillLevelSchema.optional(),
 });
 
 export const RegisterPushDeviceSchema = z.object({
   deviceToken: z.string().trim().min(16).max(512),
   platform: z.literal("IOS").default("IOS"),
-  appVersion: z.string().trim().max(40).optional()
+  appVersion: z.string().trim().max(40).optional(),
 });
 
 export const UnregisterPushDeviceSchema = z.object({
-  deviceToken: z.string().trim().min(16).max(512)
+  deviceToken: z.string().trim().min(16).max(512),
 });
 
 export const UpdateNotificationPreferenceSchema = z.object({
   remindersEnabled: z.boolean().optional(),
   statusChangesEnabled: z.boolean().optional(),
   waitlistEnabled: z.boolean().optional(),
-  reminderLeadMinutes: z.number().int().min(15).max(1440).optional()
+  reminderLeadMinutes: z.number().int().min(15).max(1440).optional(),
 });

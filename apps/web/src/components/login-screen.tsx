@@ -1,55 +1,168 @@
 "use client";
-
-import { useState } from "react";
+import { useI18n } from "@/lib/i18n";
+import { AppleSignIn } from "./apple-sign-in";
+import Script from "next/script";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
-
-function GoogleMark() {
-  return (
-    <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden>
-      <path
-        fill="#FFC107"
-        d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8a12 12 0 1 1 0-24c3 0 5.8 1.1 7.9 3l5.7-5.7A20 20 0 1 0 24 44c11 0 20-9 20-20 0-1.2-.1-2.3-.4-3.5z"
-      />
-      <path
-        fill="#FF3D00"
-        d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"
-      />
-      <path
-        fill="#4CAF50"
-        d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5C9.5 39.6 16.2 44 24 44z"
-      />
-      <path
-        fill="#1976D2"
-        d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C39.9 35.7 44 30.4 44 24c0-1.2-.1-2.3-.4-3.5z"
-      />
-    </svg>
-  );
+import { ErrorNote } from "./ui";
+import { CourtArt } from "./primitives";
+interface GoogleIdentity {
+  initialize: (options: {
+    client_id: string;
+    callback: (response: { credential: string }) => void;
+  }) => void;
+  renderButton: (
+    element: HTMLElement,
+    options: Record<string, string | number>,
+  ) => void;
 }
-
-/** Screen 1 — a single circular Google button in the middle of the screen. */
-export function LoginScreen() {
-  const { signInWithGoogle } = useAuth();
-  const [busy, setBusy] = useState(false);
-
-  async function handleLogin() {
-    setBusy(true);
-    try {
-      await signInWithGoogle();
-    } finally {
-      setBusy(false);
-    }
+declare global {
+  interface Window {
+    google?: { accounts: { id: GoogleIdentity } };
   }
+}
+export function LoginScreen() {
+  const { t, language, setLanguage } = useI18n();
 
+  const { signIn, signInWithGoogle } = useAuth();
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const googleButton = useRef<HTMLDivElement>(null);
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const setup = useCallback(() => {
+    if (!clientId || !window.google || !googleButton.current) return;
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response) => {
+        setBusy(true);
+        setError("");
+        void signInWithGoogle(response.credential)
+          .catch((err) =>
+            setError(
+              err instanceof Error ? err.message : t("Không thể đăng nhập."),
+            ),
+          )
+          .finally(() => setBusy(false));
+      },
+    });
+    window.google.accounts.id.renderButton(googleButton.current, {
+      theme: "outline",
+      size: "large",
+      width: Math.min(320, googleButton.current.clientWidth),
+      text: "continue_with",
+      locale: language,
+    });
+  }, [clientId, signInWithGoogle, language, t]);
+  useEffect(() => {
+    setup();
+  }, [setup]);
   return (
-    <main className="grid min-h-[100dvh] place-items-center px-6">
-      <button
-        onClick={handleLogin}
-        disabled={busy}
-        aria-label="Đăng nhập bằng Google"
-        className="grid h-28 w-28 place-items-center rounded-full bg-surface shadow-[0_10px_30px_-8px_rgba(31,61,43,0.35)] ring-1 ring-line/10 transition-transform duration-100 hover:scale-105 active:scale-95 disabled:opacity-60"
-      >
-        {busy ? <span className="text-sm font-bold">…</span> : <GoogleMark />}
-      </button>
-    </main>
+    <div className="auth-layout">
+      <section className="auth-story">
+        <h1>
+          {t("Thêm một kèo.")}
+          <br />
+          {t("Thêm niềm vui.")}
+        </h1>
+        <div className="story-court">
+          <CourtArt />
+        </div>
+      </section>
+      <section className="auth-panel">
+        <button
+          className="btn btn-ghost auth-language"
+          aria-label={t("Ngôn ngữ")}
+          onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
+        >
+          {language === "vi" ? "EN" : "VI"}
+        </button>
+        <div className="auth-inner">
+          <h2>{t("Sẵn sàng ra sân?")}</h2>
+          <AppleSignIn />
+          {clientId && (
+            <>
+              <Script
+                src="https://accounts.google.com/gsi/client"
+                onLoad={setup}
+                onError={() =>
+                  setError(
+                    t("Không tải được đăng nhập Google. Vui lòng thử lại."),
+                  )
+                }
+              />
+              <div
+                ref={googleButton}
+                aria-label={t("Đăng nhập với Google")}
+                style={{ minHeight: 44 }}
+              />
+            </>
+          )}
+          {busy && (
+            <p className="muted" role="status" style={{ marginTop: 16 }}>
+              {t("Đang đăng nhập…")}
+            </p>
+          )}
+          {error && (
+            <div style={{ marginTop: 16 }}>
+              <ErrorNote message={error} />
+            </div>
+          )}
+          {process.env.NODE_ENV !== "production" && (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                setBusy(true);
+                setError("");
+                void signIn(email, name || undefined)
+                  .catch((err) =>
+                    setError(
+                      err instanceof Error
+                        ? err.message
+                        : t("Không thể đăng nhập."),
+                    ),
+                  )
+                  .finally(() => setBusy(false));
+              }}
+              style={{ marginTop: 28 }}
+            >
+              <p className="muted" style={{ fontSize: "var(--type-footnote)" }}>
+                {t("Tài khoản thử nghiệm trên môi trường phát triển")}
+              </p>
+              <label>
+                {t("Tên hiển thị")}
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder={t("Tên của bạn")}
+                  maxLength={80}
+                  autoComplete="name"
+                />
+              </label>
+              <label>
+                {t("Email")}
+                <input
+                  type="email"
+                  value={email}
+                  required
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder={t("ban@example.com")}
+                  autoComplete="email"
+                />
+              </label>
+              <button className="btn btn-primary" disabled={busy}>
+                {t("Tiếp tục")}
+              </button>
+            </form>
+          )}
+          {!clientId && process.env.NODE_ENV === "production" && (
+            <div className="notice">
+              {t("Đăng nhập hiện chưa sẵn sàng. Vui lòng quay lại sau.")}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
