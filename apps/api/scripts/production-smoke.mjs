@@ -17,6 +17,7 @@ const ids = [];
 let groupId;
 let sessionId;
 let uploadedPath;
+let liveSocket;
 const app = await buildApp();
 await app.ready();
 async function account(role) {
@@ -174,6 +175,31 @@ assert.equal(
   (await call(`/sessions/${session.id}/messages`, h)).messages[0].body,
   "Tin nhắn trong kèo",
 );
+// Exercise the same upgrade/proxy path as the browser, with server-side room authorization.
+const socketURL = new URL(`${base}/ws/groups/${groupId}`);
+socketURL.protocol = socketURL.protocol === "https:" ? "wss:" : "ws:";
+socketURL.searchParams.set("token", h);
+liveSocket = new WebSocket(socketURL);
+await new Promise((resolve, reject) => {
+  const timeout = setTimeout(() => reject(new Error("WebSocket room authorization timed out")), 15000);
+  liveSocket.addEventListener("message", (event) => {
+    if (JSON.parse(String(event.data)).type === "ready") { clearTimeout(timeout); resolve(); }
+  });
+  liveSocket.addEventListener("error", () => { clearTimeout(timeout); reject(new Error("WebSocket proxy connection failed")); }, { once: true });
+});
+const liveBody = `Release live check ${run}`;
+const received = new Promise((resolve, reject) => {
+  const timeout = setTimeout(() => reject(new Error("WebSocket broadcast timed out")), 15000);
+  liveSocket.addEventListener("message", (event) => {
+    const payload = JSON.parse(String(event.data));
+    if (payload.type === "message" && payload.message?.body === liveBody) { clearTimeout(timeout); resolve(); }
+  });
+});
+await call(`/groups/${groupId}/messages`, g, "POST", { body: liveBody });
+await received;
+liveSocket.close();
+liveSocket = null;
+
 await call(`/sessions/${session.id}/save`, g, "PUT");
 assert.ok(
   (await call("/sessions?savedOnly=true", g)).sessions.some(
@@ -198,13 +224,16 @@ await call("/auth/logout", null, "POST", {
   refreshToken: refreshed.refreshToken,
 });
 
+// PRIVATE_LINK intentionally permits link discovery; GROUP_ONLY must reject outsiders.
+await call(`/sessions/${sessionId}`, h, "PATCH", { visibility: "GROUP_ONLY" });
 const stranger = await account("stranger");
 const denied = await fetch(`${base}/sessions/${sessionId}`, { headers: { authorization: `Bearer ${stranger.accessToken}` } });
-assert.ok([403, 404].includes(denied.status), "Unrelated account must not access private session");
+assert.ok([403, 404].includes(denied.status), "Unrelated account must not access a group-only session");
 const dev = await fetch(`${base}/auth/dev`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "must-not-create@example.com" }) });
 assert.equal(dev.status, 404, "Production dev login must stay disabled");
-console.log("PASS: production proxy, upload/media, invites, waitlist/promotion, host payment/check-in/lineup, edit/results/reviews, group/session chat, save/follow, alerts/preferences, refresh/logout, private-session isolation, dev-login disabled.");
+console.log("PASS: production proxy, upload/media, invites, waitlist/promotion, host payment/check-in/lineup, edit/results/reviews, group/session chat and live WebSocket, save/follow, alerts/preferences, refresh/logout, private-session isolation, dev-login disabled.");
 } finally {
+  liveSocket?.close();
   if (groupId) await prisma.group.deleteMany({ where: { id: groupId, createdByUserId: { in: ids } } });
   await prisma.user.deleteMany({ where: { id: { in: ids }, email: { endsWith: `${run}@example.com` } } });
   if (uploadedPath && /^\/uploads\/[a-zA-Z0-9._-]+$/.test(uploadedPath)) {
