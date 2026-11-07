@@ -1,48 +1,31 @@
 # Railway configuration
 
-This project defines its Railway infrastructure in code.
+`.railway/railway.ts` is the desired production configuration for `ducnmm/voi`.
+The former `railway.json` settings have been migrated into the API service's
+Dockerfile, health-check and restart configuration. Do not manage the same
+settings from a second Railway config file.
 
-```txt
-.railway/railway.ts
+Use the repository-pinned CLI and SDK:
+
+```sh
+pnpm exec railway config plan --out /tmp/voi-production.plan.json
+pnpm exec railway config apply --plan /tmp/voi-production.plan.json
 ```
 
-Use this file to describe the Railway project you want: services, databases, buckets, custom domains, replicas, groups, and environment variables.
+Review the plan before applying. In agent sessions, applying needs explicit
+approval of the exact latest plan. Do not use destructive confirmation flags
+without exact approval. A pinned plan prevents applying against changed live
+state.
 
-## Common commands
+The existing database/Redis services and all three persistent volumes are
+retained by name. Volume region and capacity reflect the imported live state;
+changing or omitting them can create destructive drift. API uploads stay mounted
+at `/app/uploads`. Imported secrets use `preserve()`.
 
-Create the configuration files:
+The web service uses a standalone Next.js Docker image and the API's configured
+public origin through a typed reference. Railway-generated domains are allocated
+operationally and are not hard-coded into the source. Google web OAuth needs the
+actual resulting HTTPS origin registered in Google Cloud. Apple web login is
+hidden until its Services ID and return URL are configured.
 
-```bash
-railway config init
-```
-
-Import an existing Railway project into code:
-
-```bash
-railway config pull
-```
-
-Preview what Railway would change:
-
-```bash
-railway config plan
-```
-
-Apply the planned changes:
-
-```bash
-railway config apply
-```
-
-Do **not** apply this sketch. Live API deploy settings are in `/railway.json`.
-The uploads volume (`/app/uploads`) is attached in the Railway dashboard/CLI.
-
-## Notes
-
-- `railway config plan` is safe and does not change Railway.
-- `railway config apply` previews changes and asks before applying unless you pass `--yes`.
-- Destructive changes in non-interactive or agent sessions require `railway config apply --confirm-destructive` after reviewing the plan.
-- Services already managed by `railway.json` / `railway.toml` must be migrated before `.railway/railway.ts` can manage them.
-- Use `replicas` for scaling; advanced placement can still specify region names.
-- Use `group("Name", [resources])` to keep large projects organized on the Railway canvas.
-- Secrets imported from Railway are rendered as `preserve()` so existing values are retained without writing secret values to source. Use `railway config pull --omit-preserved-variables` for a smaller import.
+See [the reviewed production plan](../docs/deployment/railway-production-plan.md).

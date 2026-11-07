@@ -142,3 +142,15 @@ use the same server API. Weekly repeat matches iOS: create the current session
 and three subsequent weeks, with explicit recovery links after a partial failure.
 Payment QR is a reference to show the host, not bank processing; guests cannot
 mark themselves paid. This matches the current server's host-confirmation model.
+
+## Railway production image
+
+`apps/web/Dockerfile` builds the shared package and Next.js standalone output,
+then runs as a non-root user on Railway's injected `PORT`. `/health` is the web
+process health endpoint; API/database health is checked independently.
+
+Railway settings are owned by `.railway/railway.ts`. The required build-time
+variables are `VOI_API_ORIGIN` and the configured `NEXT_PUBLIC_*` OAuth values.
+The API origin is injected from the API service's public URL; browser requests
+stay same-origin through the Next.js proxy. Do not include local `.env` files,
+QA data, build output, or generated service domains in the deployment source.
