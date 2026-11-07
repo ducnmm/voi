@@ -346,7 +346,7 @@ export function SessionTile({ session }: { session: SessionCard }) {
   const full = session.summary.availableSlots === 0;
   const cancelled = session.status === "CANCELLED";
   return (
-    <Link className="card session-card" href={`/sessions/${session.id}`}>
+    <Link prefetch={false} className="card session-card" href={`/sessions/${session.id}`}>
       <div style={{ position: "relative" }}>
         <Cover
           images={session.imageUrls}

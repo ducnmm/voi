@@ -457,6 +457,8 @@ test("custom dropdown supports keyboard, dismissal, selection and persistence", 
     await page.reload();
     await expect(theme).toHaveText("Tối");
     await theme.click();
+    await expect(menu).toBeVisible();
+    await expect(page.getByRole("option", { selected: true })).toBeFocused();
     // A viewport corner stays outside the menu and avoids scrolling the hidden background.
     await page.mouse.click(2, 100);
     await expect(menu).toBeHidden();
