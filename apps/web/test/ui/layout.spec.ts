@@ -457,8 +457,8 @@ test("custom dropdown supports keyboard, dismissal, selection and persistence", 
     await page.reload();
     await expect(theme).toHaveText("Tối");
     await theme.click();
-    // Radix hides outside content from the accessibility tree while its listbox is open.
-    await page.locator(".page-title h1").click({ force: true });
+    // A viewport corner stays outside the menu and avoids scrolling the hidden background.
+    await page.mouse.click(2, 100);
     await expect(menu).toBeHidden();
     expect(errors).toEqual([]);
   } finally { await context.close(); }
