@@ -93,6 +93,11 @@ async function navigate(page: Page, path: string) {
   await page.goto(path);
   await expect(page.locator("[data-app-shell]")).toBeVisible();
   await expect(page.locator("main#main .loading")).toHaveCount(0);
+  // These geometry checks hard-load each route. Let its API/RSC requests finish
+  // before the next document replaces it; WebKit otherwise reports the driver's
+  // canceled old-document fetches as access-control errors. Live chat uses a
+  // WebSocket, so this bounded HTTP-idle barrier does not wait on the chat socket.
+  await page.waitForLoadState("networkidle", { timeout: 15000 });
 }
 async function choose(page: Page, label: string, option: string) {
   await page.getByRole("combobox", { name: label, exact: true }).click();
