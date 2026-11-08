@@ -462,6 +462,11 @@ test("custom dropdown supports keyboard, dismissal, selection and persistence", 
     // A viewport corner stays outside the menu and avoids scrolling the hidden background.
     await page.mouse.click(2, 100);
     await expect(menu).toBeHidden();
+    await theme.click();
+    await expect(menu).toBeVisible();
+    await expect(page.getByRole("option", { selected: true })).toBeFocused();
+    await page.touchscreen.tap(2, 100);
+    await expect(menu).toBeHidden();
     expect(errors).toEqual([]);
   } finally { await context.close(); }
 });

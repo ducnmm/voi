@@ -11,7 +11,8 @@ export default defineRailway(() => {
     build: { builder: "DOCKERFILE", dockerfilePath: "apps/api/Dockerfile" },
     healthcheck: "/health",
     healthcheckTimeout: 120,
-    deploy: { restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 5 },
+    // Railway normalizes the default ON_FAILURE policy to null; preserve it.
+    deploy: { restartPolicyMaxRetries: 5 },
     env: {
       API_HOST: preserve(), APPLE_BUNDLE_ID: preserve(), APP_BASE_URL: preserve(),
       CORS_ORIGINS: preserve(), DATABASE_URL: preserve(), GOOGLE_IOS_CLIENT_ID: preserve(),
