@@ -97,7 +97,7 @@
 .community-text-button { color: var(--color-brand); background: transparent; border: 0; padding: 8px 0; min-height: 44px; text-align: left; font-size: 15px; font-weight: 500; letter-spacing: 0; }
 .community-text-button:hover { text-decoration: underline; }
 .community-back { display: inline-flex; align-items: center; gap: 6px; color: var(--color-brand); font-size: 15px; font-weight: 500; min-height: 44px; margin: -6px 0 16px; }
-.community-back svg { transform: none; }
+.community-back svg { transform: rotate(180deg); }
 .community-detail-header { margin-bottom: 24px; }
 .community-detail-header h1 { margin: 12px 0 16px; max-width: 900px; overflow-wrap: anywhere; font-weight: 650; }
 .community-status { display: inline-block; border-radius: 7px; background: var(--color-surface-2); padding: 6px 10px; font-size: 14px; font-weight: 600; }
