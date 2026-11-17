@@ -35,7 +35,7 @@ test("guest community pages render in VI/EN and light/dark without mobile overfl
   const consoleErrors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
-  for (const width of [1440, 390, 320]) {
+  for (const width of [1440, 768, 390, 320]) {
     for (const language of ["vi", "en"] as const) {
       for (const theme of ["light", "dark"] as const) {
         await page.setViewportSize({ width, height: 900 });
@@ -77,7 +77,7 @@ test("guest home and discover filter, paginate, and expose safe contact targets"
   await page.getByLabel("Khu vực").click();
   await page.getByRole("option", { name: "Thủ Đức" }).click();
   await expect(page.locator(".community-card")).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "Kèo giao lưu Thủ Đức" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sân Thủ Đức" })).toBeVisible();
   await page.getByRole("button", { name: "Xóa bộ lọc" }).click();
   await expect(page.locator(".community-card")).toHaveCount(20);
 
