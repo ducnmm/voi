@@ -19,6 +19,7 @@ export default defineRailway(() => {
       GOOGLE_WEB_CLIENT_ID: "291960099224-tukj5merv7lpvkrf3cp5dk9rcmbl5c0t.apps.googleusercontent.com",
       JWT_SECRET: preserve(), LOG_LEVEL: preserve(), NODE_ENV: preserve(),
       PUBLIC_API_URL: preserve(), RAILWAY_DOCKERFILE_PATH: preserve(), REDIS_URL: preserve(),
+      COMMUNITY_LISTINGS_WEB_ORIGIN: "https://${{web.RAILWAY_PUBLIC_DOMAIN}}",
     },
     volumeMounts: { "/app/uploads": uploads },
   });

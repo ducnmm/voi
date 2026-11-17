@@ -45,7 +45,7 @@ The API listens on `http://localhost:43187` by default (or `PORT` / `API_PORT`).
 
 ## Railway
 
-The production `api` service deploys when `main` is pushed to `ducnmm/voi`. The repo root `railway.json` is the live deploy config (Dockerfile builder, `/health`, restart policy). Do not `railway config apply` `.railway/railway.ts`. The container runs `prisma migrate deploy` then `node apps/api/dist/server.js`.
+The production `api` service deploys when `main` is pushed to `ducnmm/voi`. Infrastructure is declared in `.railway/railway.ts` (Dockerfile builder, `/health`, restart policy). Follow the repository Railway configuration workflow for changes. The container runs `prisma migrate deploy` then `node apps/api/dist/server.js`.
 
 Required production variables:
 
@@ -69,8 +69,9 @@ The iOS app talks to `https://<domain>/v1`. CORS does not apply to the native cl
 ## Testing
 
 Unit tests are pure (no database). Integration tests use Fastify's in-process
-`inject()` against a dedicated `voi_test` database (derived from `DATABASE_URL`
-by swapping the db name to `voi_test`), so they never touch dev data.
+`inject()` against an explicitly selected disposable database. Set `TEST_DATABASE_URL`;
+the database name must end in `_test` or contain `_test_`. The config refuses dev/production
+database names before tests start. Integration tests truncate this database between cases.
 
 One-time setup of the test database:
 
@@ -78,12 +79,18 @@ One-time setup of the test database:
 # create it (psql, against the same Postgres as dev)
 createdb voi_test   # or: CREATE DATABASE voi_test;
 # apply migrations to it
-DATABASE_URL="${DATABASE_URL/voi_dev/voi_test}" pnpm db:deploy
+DATABASE_URL='postgresql://voi:voi@localhost:55487/voi_test?schema=public' pnpm db:deploy
 ```
 
 Then run the suite (truncates `voi_test` between tests):
 
 ```sh
-pnpm test
+TEST_DATABASE_URL='postgresql://voi:voi@localhost:55487/voi_test?schema=public' pnpm test
 ```
+
+## Community listing integration
+
+See [Muse setup and operator commands](../../docs/integrations/muse-community-listings.md)
+for source configuration, key rotation, dry runs, batch imports, moderation and retention.
+Public discovery uses a separate model from native sessions and does not grant host ownership.
 

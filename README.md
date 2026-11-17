@@ -8,6 +8,8 @@ The product direction is:
 
 The primary client is the SwiftUI iOS app. The Fastify API is the source of truth. The responsive Next.js web client in `apps/web` shares the API, accounts and design language with iOS.
 
+The web community-discovery experiment adds anonymous browsing and external contact for source-attributed listings supplied by Muse AI. See the [integration guide](docs/integrations/muse-community-listings.md); these listings are separate from native group sessions.
+
 ## Project Layout
 
 - `apps/ios`: SwiftUI iOS app (primary client).
@@ -31,9 +33,12 @@ Versioned routes live under `/v1`. Postgres is on host port `55487`, Redis on `5
 
 Useful checks:
 
+Create/migrate a dedicated disposable test database first (see [API testing](apps/api/README.md#testing)). The suite refuses non-test database names.
+
 ```sh
 pnpm build
 pnpm typecheck
+export TEST_DATABASE_URL='postgresql://voi:voi@localhost:55487/voi_test?schema=public'
 pnpm test
 pnpm test:e2e:ios
 pnpm verify

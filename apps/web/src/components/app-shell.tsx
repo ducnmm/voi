@@ -10,6 +10,7 @@ import { Icon, type IconName } from "./icon";
 import { Onboarding } from "./onboarding";
 import { unreadChatRooms, type ChatBadges } from "@/lib/chat-read";
 import { Avatar } from "./primitives";
+import { PublicShell } from "./public-shell";
 const tabs: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Kèo cầu lông", icon: "badminton" },
   { href: "/messages", label: "Tin nhắn", icon: "chat" },
@@ -102,6 +103,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             ? t("Kèo trên bản đồ")
             : t("Lời mời"));
   if (path.startsWith("/dev-preview")) return <>{children}</>;
+  // Discovery must remain usable even if restoring an old session stalls.
+  if (path === "/discover" || path.startsWith("/community-listings/") || (path === "/" && !user))
+    return <PublicShell>{children}</PublicShell>;
   if (!ready)
     return (
       <main className="launch-screen">
@@ -166,6 +170,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="side-caption">{t("CỘNG ĐỒNG")}</div>
+        <Link className="nav-link" href="/discover">
+          <Icon name="globe" />
+          {t("Khám phá")}
+        </Link>
         <Link
           className={`nav-link ${path.startsWith("/people") ? "active" : ""}`}
           href="/people"

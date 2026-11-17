@@ -380,3 +380,204 @@ model RefreshToken {
   @@index([userId])
   @@map("refresh_tokens")
 }
+
+// Imported public listings deliberately have no native Session/User relations.
+enum CommunityPlatform {
+  FACEBOOK
+}
+
+enum CommunityPublicationStatus {
+  PUBLISHED
+  NEEDS_REVIEW
+  SUPPRESSED
+}
+
+enum CommunitySourceStatus {
+  RECRUITING
+  FULL
+  CANCELLED
+  DELETED
+  UNKNOWN
+}
+
+enum CommunitySkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  OPEN
+  UNKNOWN
+}
+
+enum CommunityFeeBasis {
+  PER_PERSON
+  PER_HOUR
+  TOTAL
+  OTHER
+  UNKNOWN
+}
+
+enum CommunityReportType {
+  WRONG_INFO
+  FULL
+  CANCELLED
+  REMOVAL_REQUEST
+}
+
+enum CommunityReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model IntegrationClient {
+  id          String                     @id @default(cuid())
+  name        String
+  scopes      String[]                   @default([])
+  sourceIds   String[]                   @default([]) @map("source_ids")
+  disabledAt  DateTime?                  @map("disabled_at")
+  createdAt   DateTime                   @default(now()) @map("created_at")
+  updatedAt   DateTime                   @updatedAt @map("updated_at")
+  credentials IntegrationCredential[]
+  operations  CommunityIngestOperation[]
+
+  @@map("integration_clients")
+}
+
+model IntegrationCredential {
+  id        String            @id @default(cuid())
+  keyId     String            @unique @map("key_id")
+  clientId  String            @map("client_id")
+  tokenHash String            @map("token_hash")
+  expiresAt DateTime?         @map("expires_at")
+  revokedAt DateTime?         @map("revoked_at")
+  createdAt DateTime          @default(now()) @map("created_at")
+  client    IntegrationClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("integration_credentials")
+}
+
+model CommunitySource {
+  id              String             @id @default(cuid())
+  platform        CommunityPlatform  @default(FACEBOOK)
+  externalGroupId String             @map("external_group_id")
+  name            String
+  url             String
+  ingestEnabled   Boolean            @default(true) @map("ingest_enabled")
+  publicEnabled   Boolean            @default(false) @map("public_enabled")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  listings        CommunityListing[]
+
+  @@unique([platform, externalGroupId])
+  @@map("community_sources")
+}
+
+model CommunityArea {
+  code     String             @id
+  label    String
+  enabled  Boolean            @default(true)
+  listings CommunityListing[]
+
+  @@map("community_areas")
+}
+
+model CommunityListing {
+  id                    String                     @id @default(cuid())
+  platform              CommunityPlatform          @default(FACEBOOK)
+  sourceId              String                     @map("source_id")
+  sourcePostId          String                     @map("source_post_id")
+  sourceUrl             String                     @map("source_url")
+  title                 String?
+  description           String?
+  startsAt              DateTime?                  @map("starts_at")
+  endsAt                DateTime?                  @map("ends_at")
+  timeZone              String                     @default("Asia/Ho_Chi_Minh") @map("time_zone")
+  venueName             String?                    @map("venue_name")
+  venueAddress          String?                    @map("venue_address")
+  areaCode              String?                    @map("area_code")
+  skillLevel            CommunitySkillLevel        @default(UNKNOWN) @map("skill_level")
+  skillText             String?                    @map("skill_text")
+  feeVnd                Int?                       @map("fee_vnd")
+  feeBasis              CommunityFeeBasis          @default(UNKNOWN) @map("fee_basis")
+  feeText               String?                    @map("fee_text")
+  requestedPlayers      Int?                       @map("requested_players")
+  organizerName         String?                    @map("organizer_name")
+  contacts              Json                       @default("[]")
+  scheduleKind          String                     @default("SINGLE") @map("schedule_kind")
+  rawText               String?                    @map("raw_text")
+  evidence              Json?
+  rawRetainedUntil      DateTime?                  @map("raw_retained_until")
+  sourcePostedAt        DateTime?                  @map("source_posted_at")
+  sourceUpdatedAt       DateTime?                  @map("source_updated_at")
+  observedAt            DateTime                   @map("observed_at")
+  receivedAt            DateTime                   @default(now()) @map("received_at")
+  lastVerifiedAt        DateTime                   @map("last_verified_at")
+  firstSeenAt           DateTime                   @default(now()) @map("first_seen_at")
+  publishedAt           DateTime?                  @map("published_at")
+  publicationStatus     CommunityPublicationStatus @default(NEEDS_REVIEW) @map("publication_status")
+  sourceStatus          CommunitySourceStatus      @default(UNKNOWN) @map("source_status")
+  reviewReasons         String[]                   @default([]) @map("review_reasons")
+  suppressionReason     String?                    @map("suppression_reason")
+  duplicateCandidateIds String[]                   @default([]) @map("duplicate_candidate_ids")
+  snapshotHash          String?                    @map("snapshot_hash")
+  version               Int                        @default(1)
+  anonymizedAt          DateTime?                  @map("anonymized_at")
+  createdAt             DateTime                   @default(now()) @map("created_at")
+  updatedAt             DateTime                   @updatedAt @map("updated_at")
+  source                CommunitySource            @relation(fields: [sourceId], references: [id])
+  area                  CommunityArea?             @relation(fields: [areaCode], references: [code], onDelete: SetNull)
+  operations            CommunityIngestOperation[]
+  reports               CommunityListingReport[]
+
+  @@unique([platform, sourcePostId])
+  @@index([publicationStatus, startsAt, id])
+  @@index([sourceId, lastVerifiedAt, id])
+  @@index([rawRetainedUntil])
+  @@map("community_listings")
+}
+
+model CommunityIngestOperation {
+  id                  String            @id @default(cuid())
+  integrationClientId String            @map("integration_client_id")
+  operationId         String            @map("operation_id")
+  payloadHash         String            @map("payload_hash")
+  result              Json
+  listingId           String?           @map("listing_id")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  client              IntegrationClient @relation(fields: [integrationClientId], references: [id], onDelete: Cascade)
+  listing             CommunityListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@unique([integrationClientId, operationId])
+  @@index([createdAt])
+  @@map("community_ingest_operations")
+}
+
+model CommunityListingReport {
+  id              String                @id @default(cuid())
+  listingId       String                @map("listing_id")
+  type            CommunityReportType
+  note            String?
+  reporterContact String?               @map("reporter_contact")
+  status          CommunityReportStatus @default(OPEN)
+  resolutionNote  String?               @map("resolution_note")
+  resolvedAt      DateTime?             @map("resolved_at")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  listing         CommunityListing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("community_listing_reports")
+}
+
+model CommunityAuditLog {
+  id         String   @id @default(cuid())
+  actor      String
+  action     String
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id")
+  details    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([targetType, targetId, createdAt])
+  @@map("community_audit_logs")
+}

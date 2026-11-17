@@ -1,5 +1,7 @@
 # API Reference Draft
 
+Community ingestion and anonymous discovery are documented in the [Muse integration guide](../integrations/muse-community-listings.md) and [community API contract](../specs/0015-community-listings/api-contract.md). The served `/openapi.json` includes their schemas and security requirements.
+
 The Voi API is a JSON HTTP API. Authentication uses a bearer token during development.
 
 Base URL for local development:

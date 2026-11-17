@@ -2,6 +2,7 @@ import { env } from "./config/env.js";
 import { prisma } from "./db/prisma.js";
 import { buildApp } from "./app.js";
 import { startNotificationWorker } from "./workers/notification-worker.js";
+import { startCommunityRetentionWorker } from "./workers/community-retention-worker.js";
 
 const app = await buildApp();
 
@@ -17,6 +18,8 @@ process.on("SIGINT", () => {
 process.on("SIGTERM", () => {
   shutdown().finally(() => process.exit(0));
 });
+
+startCommunityRetentionWorker(app);
 
 await app.listen({
   host: env.API_HOST,

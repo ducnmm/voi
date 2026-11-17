@@ -113,6 +113,14 @@ export async function request<T>(
   return payload as T;
 }
 
+/** Public catalogue requests never depend on or refresh the visitor's session. */
+export function publicRequest<T>(
+  path: string,
+  options: Omit<RequestOptions, "token" | "retried"> = {},
+): Promise<T> {
+  return request<T>(path, { ...options, token: null });
+}
+
 export const api = {
   devLogin(email: string, displayName?: string): Promise<AuthResponse> {
     return request<AuthResponse>("/auth/dev", {

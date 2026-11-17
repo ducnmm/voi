@@ -7,6 +7,8 @@ import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import websocket from "@fastify/websocket";
 import { env, getCorsOrigins } from "./config/env.js";
+import { setupIntegrationAuth } from "./plugins/integration-auth.js";
+import { communityListingRoutes } from "./routes/community-listings.js";
 import { setupAuth } from "./plugins/auth.js";
 import { handleApiError } from "./utils/api-error.js";
 import { healthRoutes } from "./routes/health.js";
@@ -27,6 +29,7 @@ import { UPLOADS_DIR, MAX_UPLOAD_BYTES } from "./config/uploads.js";
 import { uploadRoutes } from "./routes/uploads.js";
 import { redactSensitiveUrl } from "./utils/log-redact.js";
 import { closeRedis, connectRedis } from "./services/rate-limit.js";
+import { communityEventRoutes } from "./routes/community-events.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -37,6 +40,11 @@ export async function buildApp() {
       level: env.LOG_LEVEL,
       redact: {
         paths: [
+          "req.headers.authorization",
+          "headers.authorization",
+          "req.body.rawText",
+          "req.body.items",
+          "body.items",
           "req.query.token",
           "query.token",
           "req.body.deviceToken",
@@ -109,6 +117,7 @@ export async function buildApp() {
   });
 
   setupAuth(app);
+  setupIntegrationAuth(app);
   app.setErrorHandler(handleApiError);
 
   await app.register(openApiRoutes);
@@ -121,6 +130,7 @@ export async function buildApp() {
 }
 
 async function registerVersionedRoutes(app: FastifyInstance): Promise<void> {
+  await app.register(communityEventRoutes);
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(groupRoutes);
@@ -132,4 +142,5 @@ async function registerVersionedRoutes(app: FastifyInstance): Promise<void> {
   await app.register(peopleRoutes);
   await app.register(chatRoutes);
   await app.register(uploadRoutes);
+  await app.register(communityListingRoutes);
 }

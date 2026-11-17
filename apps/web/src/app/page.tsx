@@ -1,9 +1,8 @@
-import { RequireAuth } from "@/components/require-auth";
+"use client";
+import { useAuth } from "@/lib/auth";
+import { CommunityFeed } from "@/components/community-feed";
 import { SessionsFeed } from "@/components/sessions-feed";
 export default function HomePage() {
-  return (
-    <RequireAuth>
-      <SessionsFeed />
-    </RequireAuth>
-  );
+  const { user } = useAuth();
+  return user ? <SessionsFeed /> : <CommunityFeed />;
 }

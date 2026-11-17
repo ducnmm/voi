@@ -2,6 +2,8 @@
 
 Voi helps casual badminton hosts organize recurring group sessions without messy chat threads, spreadsheets, or manual payment tracking.
 
+The early community discovery experiment also helps players find existing badminton opportunities and contact external organizers without an account. See [ADR 0004](../adr/0004-community-discovery.md) and [spec 0015](../specs/0015-community-listings/spec.md) for the approved scope; native host coordination remains available.
+
 ## Positioning
 
 Voi is not a general event platform and not a full venue booking marketplace.
@@ -59,7 +61,7 @@ Voi should feel closer to Lu.ma in simplicity and visual polish, but its workflo
 
 ## Non-Goals
 
-- Do not start as a marketplace for finding public games.
+- Public discovery is limited to source-attributed community listings and external contact; booking and marketplace transactions remain outside scope.
 - Do not start with direct venue booking.
 - Do not start with support for every sport.
 - Do not start with complex league, tournament, or team management.

@@ -76,10 +76,16 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
       <Title
         title={manage ? t("Kèo tôi tổ chức") : t("Kèo cầu lông")}
         action={
+          <div className="row">
+          <Link className="btn btn-ghost" href="/discover">
+            <Icon name="globe" size={18} />
+            {t("Khám phá")}
+          </Link>
           <Link className="btn btn-primary" href="/sessions/new">
             <Icon name="plus" size={18} />
             {t("Tạo kèo")}
           </Link>
+          </div>
         }
       />
       <div className="feed-tools">

@@ -1,5 +1,7 @@
 # MVP Scope
 
+This document records the original group-coordination MVP. The shipped [web client](../specs/0014-web-client/spec.md) and approved [community discovery experiment](../specs/0015-community-listings/spec.md) extend the client and discovery exclusions below. See [ADR 0004](../adr/0004-community-discovery.md).
+
 The MVP should prove that Voi can replace chat-based coordination for small badminton groups.
 
 ## MVP Outcome

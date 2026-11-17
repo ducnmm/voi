@@ -28,6 +28,10 @@ const EnvSchema = z.object({
   REDIS_URL: z
     .union([z.string().url(), z.literal("")])
     .optional(),
+  COMMUNITY_LISTINGS_PUBLIC_ENABLED: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+  COMMUNITY_LISTINGS_INGEST_ENABLED: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+  COMMUNITY_LISTINGS_WEB_ORIGIN: z.string().url().optional(),
+  COMMUNITY_LISTINGS_STALE_HOURS: z.coerce.number().positive().default(4),
   INVITE_TTL_DAYS: z.coerce.number().int().positive().max(365).default(7),
   CHAT_RATE_MAX: z.coerce.number().int().positive().default(20),
   CHAT_RATE_WINDOW_SEC: z.coerce.number().int().positive().default(10),

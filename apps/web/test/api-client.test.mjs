@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { request, ApiError, uploadImage } from "../src/lib/api-client.ts";
+import { request, publicRequest, ApiError, uploadImage } from "../src/lib/api-client.ts";
 const originalFetch = globalThis.fetch;
 const originalWindow = globalThis.window;
 const storage = new Map();
@@ -85,6 +85,23 @@ test("public requests do not attach the locally stored token", async () => {
     return json({ ok: true });
   };
   await request("/invites/public");
+});
+test("public catalogue and reports stay anonymous even with an expired stored session", async () => {
+  storage.set("voi.token", "private-expired");
+  storage.set("voi.refresh", "private-refresh");
+  const seen = [];
+  globalThis.fetch = async (url, options) => {
+    assert.equal(options.headers.authorization, undefined);
+    assert.ok(!url.endsWith("/auth/refresh"));
+    seen.push([url, options.method]);
+    return json({ error: { code: "UNAVAILABLE" } }, 401);
+  };
+  await assert.rejects(publicRequest("/community-listings"), (err) => err.status === 401);
+  await assert.rejects(publicRequest("/community-listings/id/reports", {
+    method: "POST", body: { type: "WRONG_INFO" }, token: "accidentally-passed-token",
+  }), (err) => err.status === 401);
+  assert.equal(seen.length, 2);
+  assert.equal(expired, 0);
 });
 test("a late old-token response reuses an already rotated access token", async () => {
   storage.set("voi.token", "old");

@@ -1,3 +1,4 @@
+import { communityOpenApiPaths, communityOpenApiSchemas } from "./community-openapi.js";
 import { env } from "./config/env.js";
 
 export const openApiDocument = {
@@ -17,6 +18,7 @@ export const openApiDocument = {
   security: [{ bearerAuth: [] }],
   components: {
     securitySchemes: {
+      integrationKey: { type: "http", scheme: "bearer", bearerFormat: "Integration key (voi_int.keyId.secret)" },
       bearerAuth: {
         type: "http",
         scheme: "bearer",
@@ -24,6 +26,7 @@ export const openApiDocument = {
       }
     },
     schemas: {
+      ...communityOpenApiSchemas,
       ErrorResponse: {
         type: "object",
         required: ["error"],
@@ -54,6 +57,7 @@ export const openApiDocument = {
     }
   },
   paths: {
+    ...communityOpenApiPaths,
     "/health": {
       get: {
         security: [],

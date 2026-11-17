@@ -12,6 +12,14 @@ export async function buildTestApp(): Promise<FastifyInstance> {
 }
 
 const TABLES = [
+  "community_listing_reports",
+  "community_ingest_operations",
+  "community_listings",
+  "community_audit_logs",
+  "community_areas",
+  "community_sources",
+  "integration_credentials",
+  "integration_clients",
   "reviews",
   "saved_sessions",
   "follows",
