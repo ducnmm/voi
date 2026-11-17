@@ -73,10 +73,11 @@ export function LoginScreen() {
       <section className="auth-panel">
         <button
           className="btn btn-ghost auth-language"
-          aria-label={t("Ngôn ngữ")}
+          aria-label={`${t("Ngôn ngữ")}: ${language === "vi" ? "Tiếng Việt" : "English"}. ${t(language === "vi" ? "Chuyển sang tiếng Anh" : "Chuyển sang tiếng Việt")}`}
+          title={t(language === "vi" ? "Chuyển sang tiếng Anh" : "Chuyển sang tiếng Việt")}
           onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
         >
-          {language === "vi" ? "EN" : "VI"}
+          {language.toUpperCase()}
         </button>
         <div className="auth-inner">
           <h2>{t("Sẵn sàng ra sân?")}</h2>
