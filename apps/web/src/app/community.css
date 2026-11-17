@@ -1,9 +1,13 @@
-/* Public discovery favors readable feed text over the compact native-app scale. */
-.public-shell {
+/* Community content shares the application surfaces and keeps source text readable. */
+.public-shell,
+.community-surface {
   --community-secondary: color-mix(in srgb, var(--color-ink) 76%, var(--color-surface));
-  --community-border: color-mix(in srgb, var(--color-ink) 17%, var(--color-surface));
-  --community-shadow: 0 2px 6px rgb(0 0 0 / 0.06);
+  --community-border: var(--color-line);
   --color-muted: var(--community-secondary);
+}
+.public-shell,
+.community-card,
+.community-detail {
   font-size: 16px;
   font-weight: 400;
   letter-spacing: 0;
@@ -37,13 +41,13 @@
 .community-feed > .page-title h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
 .community-layout { display: grid; grid-template-columns: 240px minmax(0, 740px); gap: 24px; align-items: start; justify-content: center; }
 .community-filter-panel { position: sticky; top: 96px; min-width: 0; padding: 20px; }
-.public-shell .community-filter-panel,
-.public-shell .community-card,
-.public-shell .community-detail .card {
+.community-surface .community-filter-panel,
+.community-surface .community-card,
+.community-surface .community-detail .card {
   background: var(--color-surface);
   border: 1px solid var(--community-border);
-  border-radius: 14px;
-  box-shadow: var(--community-shadow);
+  border-radius: var(--radius-card);
+  box-shadow: none;
 }
 .community-filter-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; }
 .community-filter-heading h2 { font-size: 17px; font-weight: 650; letter-spacing: 0; }
@@ -54,20 +58,20 @@
 .community-filters .select-trigger { height: 46px; min-height: 46px; padding: 10px 12px; font-size: 15px; font-weight: 500; letter-spacing: 0; border-color: var(--community-border); }
 .community-filters .select-trigger { gap: 8px; }
 .community-clear { padding-inline: 0; justify-self: start; white-space: nowrap; }
-.public-shell .community-clear { font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.community-surface .community-clear { font-size: 14px; font-weight: 600; letter-spacing: 0; }
 .community-results { min-width: 0; }
 .community-feed-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; margin: 1px 0 14px; }
 .community-feed-heading h2 { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; }
 .community-feed-heading > span { color: var(--color-muted); font-size: 14px; }
 .community-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
-.public-shell .community-card { display: flex; flex-direction: column; padding: 22px 24px; }
+.community-surface .community-card { display: flex; flex-direction: column; min-width: 0; padding: 24px; container: community-card / inline-size; }
 .community-card-header { display: flex; align-items: center; gap: 12px; }
 .community-source-avatar { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; color: var(--color-brand); background: var(--color-sage); }
 .community-card-identity { min-width: 0; }
 .community-source { display: flex; align-items: center; gap: 7px; color: var(--color-ink); font-size: 14px; font-weight: 650; line-height: 1.4; letter-spacing: 0; overflow-wrap: anywhere; }
 .community-card-organizer { margin-top: 2px; color: var(--color-muted); font-size: 14px; line-height: 1.4; }
 .community-card-organizer > span { font-weight: 500; }
-.community-card h2 { font-size: 21px; font-weight: 650; line-height: 1.3; letter-spacing: -0.01em; margin: 16px 0 14px; }
+.community-card h2 { font-size: var(--type-card); font-weight: 650; line-height: 1.3; letter-spacing: -0.01em; margin: 16px 0 14px; }
 .community-card h2 a:hover { color: var(--color-brand); }
 .community-card-facts { display: grid; gap: 11px; font-size: 16px; line-height: 1.45; }
 .community-card-facts > div { display: flex; align-items: flex-start; gap: 11px; }
@@ -86,8 +90,8 @@
 .community-availability { font-size: 14px; font-weight: 600; color: var(--color-ink); }
 .community-freshness { color: var(--color-muted); font-size: 13px; line-height: 1.4; margin-top: 3px; }
 .community-freshness.is-stale { color: var(--color-ink); font-weight: 500; }
-.community-open { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border-radius: 8px; color: #fff; background: #0066cc; font-size: 15px; font-weight: 600; line-height: 1.35; letter-spacing: 0; white-space: nowrap; }
-.community-open:hover { background: #005bb5; box-shadow: 0 2px 8px color-mix(in srgb, var(--color-brand) 20%, transparent); }
+.community-open { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border-radius: 9999px; color: var(--color-on-brand); background: var(--color-action, #0066cc); font-size: 15px; font-weight: 600; line-height: 1.35; letter-spacing: 0; white-space: nowrap; }
+.community-open:hover { background: color-mix(in srgb, var(--color-action, #0066cc) 90%, #000); }
 .community-open svg { transform: rotate(180deg); }
 .community-card h2, .community-card-facts span, .community-card-summary span, .community-details dd, .community-description p, .community-organizer { overflow-wrap: anywhere; min-width: 0; }
 .community-pagination { text-align: center; margin-top: 24px; }
@@ -125,14 +129,19 @@
 .community-contact .community-organizer { margin-top: 8px; font-size: 16px; font-weight: 600; }
 .community-contact > .muted { font-size: 15px; margin-top: 10px; }
 .community-contact-actions { display: grid; gap: 10px; margin: 20px 0 14px; }
-.community-contact-actions .btn { width: 100%; padding-inline: 14px; font-size: 15px; font-weight: 600; letter-spacing: 0; border-radius: 8px; }
+.community-contact-actions .btn { width: 100%; padding-inline: 14px; font-size: 15px; font-weight: 600; letter-spacing: 0; border-radius: 9999px; }
 .community-contact-hint { font-size: 14px; color: var(--color-muted); margin-top: 10px; }
 .community-report-form { display: grid; gap: 18px; }
 .community-report-form small { color: var(--color-muted); font-size: 14px; }
 .community-report-success { display: flex; align-items: center; text-align: center; flex-direction: column; gap: 18px; padding: 20px 0; }
 .community-report-success svg { color: var(--color-brand); }
 .community-report-success p { color: var(--color-muted); font-size: 16px; }
-.page-title > .row { justify-content: center; flex-wrap: wrap; }
+.community-surface .page-title > .row { justify-content: center; flex-wrap: wrap; }
+.app-shell .community-contact { top: 24px; }
+@container community-card (max-width: 340px) {
+  .community-card-footer { flex-direction: column; align-items: stretch; gap: 13px; }
+  .community-open { width: 100%; }
+}
 @media (max-width: 1000px) {
   .community-feed { max-width: 740px; margin-inline: auto; }
   .community-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
@@ -157,8 +166,7 @@
   .community-filters input, .community-filters .select-trigger { font-size: 16px; }
   .community-clear { grid-column: 1 / -1; justify-self: start; padding: 4px 0; min-height: 44px; }
   .community-grid { gap: 16px; }
-  .public-shell .community-card { padding: 20px; }
-  .community-card h2 { font-size: 20px; }
+  .community-surface .community-card { padding: 20px; }
   .community-card-footer { align-items: flex-start; gap: 12px; }
   .community-open { padding-inline: 13px; }
   .community-feed-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
@@ -175,8 +183,8 @@
   .public-nav-actions .icon-btn { width: 44px; min-width: 44px; }
   .public-nav-actions .btn { padding-inline: 12px; }
   .community-filter-panel { padding: 16px; }
-  .public-shell .community-card,
-  .public-shell .community-detail .card { padding: 18px 16px; }
+  .community-surface .community-card,
+  .community-surface .community-detail .card { padding: 18px 16px; }
   .community-card-header { gap: 10px; }
   .community-source-avatar { flex-basis: 40px; width: 40px; height: 40px; }
   .community-card-footer { flex-direction: column; align-items: stretch; gap: 13px; }

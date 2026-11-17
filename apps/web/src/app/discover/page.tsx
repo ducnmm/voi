@@ -1,5 +1,5 @@
-import { CommunityFeed } from "@/components/community-feed";
+import { redirect } from "next/navigation";
 
 export default function DiscoverPage() {
-  return <CommunityFeed />;
+  redirect("/");
 }

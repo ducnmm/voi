@@ -21,12 +21,12 @@ const reportTypes = {
 export function CommunityListingView({ id }: { id: string }) {
   const { t } = useI18n();
   const { data, error, loading, reload } = usePublicResource<{ listing: CommunityListingDTO }>(`/community-listings/${encodeURIComponent(id)}`);
-  return <>
-    <Link className="community-back" href="/discover"><Icon name="chevron" size={14} />{t("Khám phá")}</Link>
+  return <div className="community-surface">
+    <Link className="community-back" href="/"><Icon name="chevron" size={14} />{t("Khám phá")}</Link>
     {loading && <div className="loading" role="status">{t("Đang tải…")}</div>}
     {error?.status === 404 ? <Empty icon="search" title={t("Kèo không còn hiển thị")} action={<Link className="btn btn-primary" href="/discover">{t("Khám phá kèo khác")}</Link>}>{t("Bài này đã được gỡ hoặc không còn được chia sẻ công khai.")}</Empty> : error && <div className="community-error" role="alert"><p>{t("Không thể tải kèo cộng đồng. Vui lòng thử lại.")}</p><button className="btn btn-secondary" onClick={reload}>{t("Thử lại")}</button></div>}
     {data && <ListingContent listing={data.listing} />}
-  </>;
+  </div>;
 }
 
 function ListingContent({ listing }: { listing: CommunityListingDTO }) {

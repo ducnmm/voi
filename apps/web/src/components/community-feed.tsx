@@ -59,7 +59,7 @@ export function CommunityFeed() {
   const hasFilters = Boolean(areaCode || date || skillLevel);
   const reset = () => { setAreaCode(""); setDate(""); setSkillLevel(""); };
   return (
-    <div className="community-feed">
+    <div className="community-feed community-surface">
       <Title title={t("Khám phá")} action={
         <button className="icon-btn" aria-label={t("Làm mới")} disabled={loading} onClick={() => { setRevision((value) => value + 1); if (areaError) reloadAreas(); }}>
           <Icon name="refresh" size={19} />

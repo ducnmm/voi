@@ -87,7 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [token, user]);
   const active = (href: string) =>
     href === "/"
-      ? path === "/" || path.startsWith("/sessions")
+      ? path === "/" || path === "/discover" || path.startsWith("/sessions") || path.startsWith("/community-listings/")
       : path.startsWith(href);
   const compactActive = (href: string) =>
     active(href) || (href === "/profile" && path.startsWith("/settings"));
@@ -104,7 +104,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             : t("Lời mời"));
   if (path.startsWith("/dev-preview")) return <>{children}</>;
   // Discovery must remain usable even if restoring an old session stalls.
-  if (path === "/discover" || path.startsWith("/community-listings/") || (path === "/" && !user))
+  if (!user && (path === "/discover" || path.startsWith("/community-listings/") || path === "/"))
     return <PublicShell>{children}</PublicShell>;
   if (!ready)
     return (
@@ -170,10 +170,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="side-caption">{t("CỘNG ĐỒNG")}</div>
-        <Link className="nav-link" href="/discover">
-          <Icon name="globe" />
-          {t("Khám phá")}
-        </Link>
         <Link
           className={`nav-link ${path.startsWith("/people") ? "active" : ""}`}
           href="/people"

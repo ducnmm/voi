@@ -4,12 +4,16 @@ import { useI18n } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useResource } from "@/lib/use-resource";
+import { useCommunityFeed } from "@/lib/use-community-feed";
+import { useAuth } from "@/lib/auth";
+import { request } from "@/lib/api-client";
 import type { SessionCard } from "@/lib/api-types";
 import { formatSessionTime, formatVnd } from "@/lib/format";
 import { Icon } from "./icon";
 import { Cover, Empty, Title, skillLabels } from "./primitives";
 import { Dialog } from "./dialog";
 import { ErrorNote, Spinner } from "./ui";
+import { CommunityListingCard } from "./community-feed";
 export function SessionsFeed({ manage = false }: { manage?: boolean }) {
   const { t } = useI18n();
 
@@ -34,7 +38,7 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
     availableOnly: String(available),
     ...(skill ? { skill } : {}),
     ...(venue ? { venue } : {}),
-  });
+  }).toString();
   const { data, error, loading, reload } = useResource<{
     sessions: SessionCard[];
     nextCursor?: string | null;
@@ -44,6 +48,19 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
   const [moreBusy, setMoreBusy] = useState(false);
   const [moreError, setMoreError] = useState("");
   const { token, user } = useAuth();
+  const nativeGeneration = useRef(0);
+  const nativeMorePending = useRef(false);
+  const communityEnabled = !manage && scope === "upcoming" && !saved && !available;
+  const community = useCommunityFeed(communityEnabled, skill);
+  useEffect(() => {
+    ++nativeGeneration.current;
+    nativeMorePending.current = false;
+    setExtra([]);
+    setCursor(null);
+    setMoreBusy(false);
+    setMoreError("");
+    return () => { ++nativeGeneration.current; };
+  }, [query, token]);
   useEffect(() => {
     if (data)
       setVenues((current) =>
@@ -55,6 +72,14 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
         ].sort(),
       );
   }, [data]);
+  useEffect(() => {
+    if (community.listings.length)
+      setVenues((current) => [...new Set([
+        ...current,
+        ...community.listings.flatMap((item) => item.venueName ? [item.venueName] : []),
+      ])].sort());
+  }, [community.listings]);
+  const venueOptions = [...new Set([...venues, ...(venue ? [venue] : [])])].sort();
   const items = [...(data?.sessions ?? []), ...extra]
     .filter((item) => !manage || item.hostUserId === user?.id)
     .filter(
@@ -66,26 +91,45 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
         .toLocaleLowerCase("vi")
         .includes(search.toLocaleLowerCase("vi")),
     );
+  const communityItems = community.listings
+    .filter((listing) => !skill || listing.skillLevel === skill)
+    .filter((listing) => !venue || (listing.venueName ?? "").toLocaleLowerCase("vi").includes(venue.toLocaleLowerCase("vi")))
+    .filter((listing) => `${listing.title} ${listing.venueName ?? ""} ${listing.venueAddress ?? ""} ${listing.areaLabel ?? ""} ${listing.source.name}`
+      .toLocaleLowerCase("vi").includes(search.toLocaleLowerCase("vi")))
+    .sort((left, right) => {
+      // Recruitment counts do not tell us how many spaces are still available.
+      // All community capacities remain unknown for the native "spots" sort.
+      if (sort === "price") {
+        const leftFee = left.feeBasis === "PER_PERSON" ? left.feeVnd : null;
+        const rightFee = right.feeBasis === "PER_PERSON" ? right.feeVnd : null;
+        if (leftFee !== rightFee) {
+          if (leftFee === null) return 1;
+          if (rightFee === null) return -1;
+          return leftFee - rightFee;
+        }
+      }
+      return (left.startsAt ?? "9999").localeCompare(right.startsAt ?? "9999") || left.id.localeCompare(right.id);
+    });
   const reset = () => {
+    ++nativeGeneration.current;
+    nativeMorePending.current = false;
     setExtra([]);
     setCursor(null);
+    setMoreBusy(false);
     setMoreError("");
   };
+  const showCommunitySection = communityEnabled && Boolean(
+    community.loading || community.error || communityItems.length || community.nextCursor,
+  );
   return (
-    <>
+    <div className="community-surface">
       <Title
         title={manage ? t("Kèo tôi tổ chức") : t("Kèo cầu lông")}
         action={
-          <div className="row">
-          <Link className="btn btn-ghost" href="/discover">
-            <Icon name="globe" size={18} />
-            {t("Khám phá")}
-          </Link>
           <Link className="btn btn-primary" href="/sessions/new">
             <Icon name="plus" size={18} />
             {t("Tạo kèo")}
           </Link>
-          </div>
         }
       />
       <div className="feed-tools">
@@ -150,10 +194,11 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
           <button
             className="icon-btn"
             aria-label={t("Làm mới")}
-            disabled={loading}
+            disabled={loading || community.loading}
             onClick={() => {
               reset();
               void reload();
+              community.reload();
             }}
           >
             <Icon name="refresh" size={18} />
@@ -221,7 +266,7 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
               }}
             >
               <option value="">{t("Tất cả sân")}</option>
-              {venues.map((name) => (
+              {venueOptions.map((name) => (
                 <option value={name} key={name}>
                   {name}
                 </option>
@@ -261,6 +306,7 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
         <Spinner />
       ) : items.length ? (
         <>
+          {communityEnabled && <h2 style={{ fontSize: "var(--type-card)", marginBottom: 16 }}>{t("Kèo của nhóm")}</h2>}
           <div className="row spread feed-summary">
             <span className="muted" style={{ fontSize: "var(--type-footnote)" }}>
               {items.length} {t("kèo")}
@@ -287,6 +333,9 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
               style={{ margin: "24px auto", display: "flex" }}
               disabled={moreBusy}
               onClick={async () => {
+                if (nativeMorePending.current) return;
+                const current = nativeGeneration.current;
+                nativeMorePending.current = true;
                 setMoreBusy(true);
                 setMoreError("");
                 try {
@@ -297,16 +346,21 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
                     `/sessions?${query}&cursor=${encodeURIComponent(cursor ?? data?.nextCursor ?? "")}`,
                     { token },
                   );
-                  setExtra([...extra, ...next.sessions]);
+                  if (current !== nativeGeneration.current) return;
+                  setExtra((previous) => [...previous, ...next.sessions]);
                   setCursor(next.nextCursor ?? "");
                 } catch (err) {
-                  setMoreError(
-                    err instanceof Error
-                      ? err.message
-                      : t("Không tải được kèo."),
-                  );
+                  if (current === nativeGeneration.current)
+                    setMoreError(
+                      err instanceof Error
+                        ? err.message
+                        : t("Không tải được kèo."),
+                    );
                 } finally {
-                  setMoreBusy(false);
+                  if (current === nativeGeneration.current) {
+                    nativeMorePending.current = false;
+                    setMoreBusy(false);
+                  }
                 }
               }}
             >
@@ -315,11 +369,11 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
             </button>
           )}
         </>
-      ) : (
+      ) : showCommunitySection ? null : (
         <Empty
           icon={saved ? "bookmark" : "court"}
           title={
-            search || skill || available
+            search || skill || venue || available
               ? t("Chưa tìm thấy kèo phù hợp")
               : saved
                 ? t("Những kèo bạn muốn quay lại")
@@ -341,11 +395,32 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
               )}
         </Empty>
       )}
-    </>
+      {showCommunitySection && <section aria-label={t("Kèo cộng đồng")} style={{ marginTop: items.length || error ? 32 : 0 }}>
+        <div className="community-feed-heading">
+          <h2>{t("Kèo cộng đồng")}</h2>
+          <span>{t("Liên hệ trực tiếp chủ kèo")}</span>
+        </div>
+        {community.loading && <Spinner />}
+        {community.error && <div className="stack">
+          <ErrorNote message={t("Không thể tải kèo cộng đồng. Vui lòng thử lại.")} />
+          <button className="btn btn-secondary" onClick={community.reload}>{t("Thử lại")}</button>
+        </div>}
+        {communityItems.length > 0 && <div className="feed-grid">
+          {communityItems.map((listing) => <CommunityListingCard key={listing.id} listing={listing} />)}
+        </div>}
+        {!community.loading && !community.error && !communityItems.length && community.nextCursor && <p className="muted">{t("Chưa có kèo phù hợp")}</p>}
+        {community.moreError && <ErrorNote message={t("Không thể tải kèo cộng đồng. Vui lòng thử lại.")} />}
+        {community.nextCursor && <button
+          className="btn btn-secondary"
+          aria-label={`${t("Xem thêm kèo")} — ${t("Kèo cộng đồng")}`}
+          style={{ margin: "24px auto", display: "flex" }}
+          disabled={community.loadingMore}
+          onClick={() => void community.loadMore()}
+        >{community.loadingMore ? t("Đang tải…") : t("Xem thêm kèo")}</button>}
+      </section>}
+    </div>
   );
 }
-import { useAuth } from "@/lib/auth";
-import { request } from "@/lib/api-client";
 export function SessionTile({ session }: { session: SessionCard }) {
   const { t } = useI18n();
 
