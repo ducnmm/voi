@@ -1,6 +1,6 @@
 # Hợp đồng API cho Muse AI
 
-Status: Implemented — đã kiểm thử local; chưa triển khai bản này lên production.
+Contract v2, giữ tương thích v1. Trạng thái triển khai/kiểm chứng của đợt chuẩn hóa nằm trong [spec 0016](../../specs/0016-community-normalization/spec.md). Đối chiếu `/openapi.json` trước khi chuyển bot sang v2.
 
 ## Địa chỉ và xác thực
 
@@ -21,6 +21,9 @@ Key này là integration credential có quyền và nguồn được giới hạ
 | `POST /v1/integrations/community-listings/batch` | Bot write + source scope | Upsert các snapshot, hoặc ngừng hiển thị bài qua quan sát FULL/CANCELLED/DELETED. `dryRun` để kiểm tra trước khi nhập. |
 | `GET /v1/integrations/community-listings?sourceId=...&needsRecheck=true&cursor=...` | Bot read + source scope | Bài chưa tới giờ gồm full/cancelled; bài review chưa rõ ngày trong 7 ngày từ firstSeenAt. Loại deleted/suppressed; sắp theo lần kiểm tra cũ nhất và ID, có permalink/cursor/limit. |
 | `GET /v1/integrations/community-listings/:id` | Bot read + source scope | Đọc kết quả/trạng thái hiện tại sau khi nhập hoặc retry; không truy cập listing ngoài phạm vi. |
+| `GET /v1/integrations/community-listings/catalog` | Bot read | Danh mục rank và Venue hiện có để đề xuất chuẩn hóa; không cấp quyền sửa/xác minh Venue. |
+| `GET /v1/community-listings/skills` | Public | Scale và rank code/label/order của Voi. |
+| `GET /v1/venues?q=...&areaCode=...&limit=...` | Public | Tìm Venue; kết quả có Maps link và trạng thái tọa độ. |
 | `GET /v1/community-listings` | Public | Feed đang tuyển, filter khu vực/ngày/trình độ, cursor/limit. |
 | `GET /v1/community-listings/areas` | Public | Mã và tên khu vực đã cấu hình để dùng trong bộ lọc. |
 | `GET /v1/community-listings/:id` | Public | DTO công khai; bài cần review/suppressed/deleted hoặc nguồn tắt hiển thị trả 404. Bài đã hết hạn/full/cancelled có trạng thái phù hợp, không CTA đăng ký. |
@@ -28,6 +31,35 @@ Key này là integration credential có quyền và nguồn được giới hạ
 | `POST /v1/community-listings/:id/events` | Public có rate limit | Ghi log VIEW hoặc CONTACT, không ghi danh hay giữ chỗ. CONTACT cần contactType SOURCE/PHONE/ZALO/FACEBOOK; trả 204. |
 
 Không mở API tạo nguồn, cấp khóa hay khôi phục bài bị gỡ cho Muse. Các thao tác đó dùng CLI nội bộ có audit trong đợt đầu.
+
+## V2 và dữ liệu chuẩn hóa
+
+V1 tiếp tục nhận nguyên payload cũ. V2 giữ tất cả trường listing/evidence hiện có, cho phép thêm `listing.venueId` (ID catalog hoặc null), `listing.venueMapsUrl` (link HTTPS được hỗ trợ từ nguồn hoặc null), `listing.skillProposal` (đề xuất tùy chọn hoặc null) và `evidence.skill` (trích đoạn trong rawText). Khi skillText khác null, evidence.skill **bắt buộc không rỗng**, giữ nhãn nam/nữ và các điều kiện. BE đối chiếu nghĩa toàn bộ trích đoạn; đổi từ nguồn “chỉ tuyển nữ TB” sang skillText “Nam TB” bị từ chối bằng `SKILL_EVIDENCE_MISMATCH`. `schemaVersion` nằm trên batch envelope.
+
+Ví dụ **fragment bổ sung**, không phải payload hoàn chỉnh:
+
+```json
+{
+  "skillProposal": {
+    "scaleCode": "VN_COMMUNITY_V1",
+    "recruitmentAudience": "UNKNOWN",
+    "requirements": [
+      {"audience":"MALE","mode":"RANGE","minRank":"TBY","maxRank":"TB","minInclusive":true,"maxInclusive":true,"alternative":0,"evidence":"Nam TBY đến TB"},
+      {"audience":"FEMALE","mode":"RANGE","minRank":"YEU_PLUS","maxRank":null,"minInclusive":true,"maxInclusive":true,"alternative":0,"evidence":"Nữ Yếu+ trở lên"}
+    ]
+  },
+  "venueId": null,
+  "venueMapsUrl": null
+}
+```
+
+Khi không chắc, bỏ skillProposal và giữ skillText + evidence.skill; BE vẫn tự chuẩn hóa. Không gửi metadata/status do bot tự xác nhận. Rule dùng audience ALL/MALE/FEMALE, mode RANGE/UNRESTRICTED/UNKNOWN; RANGE phải có cận, đúng thứ tự trong cùng scale. Không đổi UNKNOWN thành UNRESTRICTED. Các rank liệt kê rời nhau là OR, không tự nối thành một khoảng rộng.
+
+BE kiểm tra proposal và venueId dựa trên dữ liệu nguồn/catalog; một field do Muse đề xuất không đủ để xác minh. Giữ tên/địa chỉ nguồn ngay cả khi venueId đã biết. Hai cơ sở cùng tên/thương hiệu không dùng chung ID nếu khác địa điểm.
+
+Listing DTO có thêm `skillNormalization` (scale/version/status/requirements/recruitmentAudience/notes/reasons), `venueId`, `venue`, `venueResolution`. Public requirements không trả evidence nguồn; integration read đã xác thực giữ bằng chứng để bot đối chiếu. `venue` gồm id/name/address/areaCode/latitude/longitude/mapsUrl/locationVerified/status. Tọa độ không có hoặc chưa xác minh trả null; không suy tọa độ từ tên sân.
+
+Feed nhận `audience`, `rank`, `includeUnknown=true|false`, `venueId` bên cạnh filter cũ. Thống kê/range dùng mã rank; string vẫn được giữ để đối chiếu. SchemaVersion của retry đã lưu không được thay đổi; đổi sang v2 ở lần quan sát mới với operationId mới.
 
 ## Payload mẫu
 

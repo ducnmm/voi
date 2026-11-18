@@ -82,7 +82,9 @@ test("guest home and discover filter, paginate, and expose safe contact targets"
   await expect(page.locator(".community-card")).toHaveCount(20);
 
   await page.goto(`${BASE}/community-listings/${IDS.open}`);
-  const outbound = await page.locator("a[href^='https://']").evaluateAll((anchors) => anchors.map((a) => ({
+  const contactLinks = page.locator(".community-contact-actions a[href^='https://']");
+  await expect(contactLinks.first()).toBeVisible();
+  const outbound = await contactLinks.evaluateAll((anchors) => anchors.map((a) => ({
     href: (a as HTMLAnchorElement).href,
     target: (a as HTMLAnchorElement).target,
     rel: (a as HTMLAnchorElement).rel,
@@ -92,7 +94,7 @@ test("guest home and discover filter, paginate, and expose safe contact targets"
     expect(link.href).toMatch(/^https:\/\/(?:www\.facebook\.com|facebook\.com)\//);
     if (link.target === "_blank") expect(link.rel).toContain("noopener");
   }
-  await expect(page.locator("a[href^='https://']")).toHaveAttribute("target", "_blank");
+  await expect(contactLinks).toHaveAttribute("target", "_blank");
 });
 
 test("detail, unknown details, report submission, login, and private route guard", async ({ page }) => {

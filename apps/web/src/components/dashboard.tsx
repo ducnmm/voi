@@ -10,6 +10,8 @@ import type { GroupSummary } from "@/lib/api-types";
 import { Icon } from "./icon";
 import { Title, Empty, skillLabels } from "./primitives";
 import { ErrorNote, Spinner } from "./ui";
+import { VenuePicker } from "./venue-picker";
+import type { VenueSummary } from "@/lib/normalization";
 export function Dashboard() {
   const { t } = useI18n();
 
@@ -19,6 +21,8 @@ export function Dashboard() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [skill, setSkill] = useState("OPEN");
+  const [venueName, setVenueName] = useState("");
+  const [venue, setVenue] = useState<VenueSummary | null>(null);
   const [busy, setBusy] = useState(false);
   return (
     <div className="stack">
@@ -50,11 +54,15 @@ export function Dashboard() {
                   name: name.trim(),
                   description: description.trim() || undefined,
                   defaultSkillLevel: skill,
+                  defaultVenueName: venueName.trim() || undefined,
+                  defaultVenueId: venue?.id ?? undefined,
                 },
               });
               setCreating(false);
               setName("");
               setDescription("");
+              setVenueName("");
+              setVenue(null);
               await resource.reload();
             } catch (err) {
               resource.setError(
@@ -85,6 +93,7 @@ export function Dashboard() {
               placeholder={t("Giới thiệu một chút về nhóm…")}
             />
           </label>
+          <VenuePicker required={false} name={venueName} venueId={venue?.id ?? null} onNameChange={name => { setVenueName(name); setVenue(null); }} onSelect={selected => { setVenue(selected); if (selected) setVenueName(selected.name); }} />
           <label>
             {t("Trình độ mặc định")}
             <Select value={skill} onValueChange={(value) => setSkill(value)}>

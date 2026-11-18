@@ -54,6 +54,12 @@
 .community-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: end; }
 .community-filters label, .community-report-form label { display: flex; flex-direction: column; gap: 7px; min-width: 0; letter-spacing: 0; }
 .community-filters label > span { color: var(--color-ink); font-size: 14px; font-weight: 600; }
+.community-filters .community-unknown-filter { flex-direction: row; align-items: center; gap: 9px; }
+.community-unknown-filter input { flex: 0 0 18px; width: 18px; height: 18px; min-height: 18px; }
+.community-normalization-filter-group { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 18px; border-top: 1px solid var(--color-line); }
+.community-normalization-filter-group h3 { grid-column: 1 / -1; font-size: var(--type-callout); }
+.community-normalization-filter-group label { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.community-normalization-filter-group .community-unknown-filter { flex-direction: row; align-items: center; }
 .community-filters input,
 .community-filters .select-trigger { height: 46px; min-height: 46px; padding: 10px 12px; font-size: 15px; font-weight: 500; letter-spacing: 0; border-color: var(--community-border); }
 .community-filters .select-trigger { gap: 8px; }
@@ -178,6 +184,7 @@
   .community-details dl > div { grid-template-columns: minmax(100px, 0.65fr) minmax(0, 1fr); gap: 12px; }
 }
 @media (max-width: 359px) {
+  .community-normalization-filter-group { grid-template-columns: minmax(0, 1fr); }
   .public-nav { padding-inline: 12px; }
   .public-content { padding-inline: 12px; }
   .public-nav-actions .icon-btn { width: 44px; min-width: 44px; }

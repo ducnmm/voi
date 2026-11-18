@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CommunityListingDTO, CommunityListingFeedResponse } from "@voi/shared";
 import { publicRequest } from "./api-client";
+import { emptyNormalizationFilters, normalizationQuery, type CommunityNormalizationFilters } from "./normalization";
 
 const EMPTY_LISTINGS: CommunityListingDTO[] = [];
 
 /** Public listings stay anonymous even when embedded in a signed-in feed. */
-export function useCommunityFeed(enabled: boolean, skillLevel: string) {
-  const query = new URLSearchParams({ limit: "20", ...(skillLevel ? { skillLevel } : {}) }).toString();
+export function useCommunityFeed(enabled: boolean, skillLevel: string, filters: CommunityNormalizationFilters = emptyNormalizationFilters) {
+  const query = new URLSearchParams({ limit: "20", ...(skillLevel ? { skillLevel } : {}), ...normalizationQuery(filters) }).toString();
   const key = enabled ? query : null;
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState<{

@@ -69,25 +69,25 @@ enum AuthProvider {
 }
 
 model User {
-  id                String               @id @default(cuid())
-  email             String               @unique
-  displayName       String               @map("display_name")
-  avatarUrl         String?              @map("avatar_url")
-  defaultSkillLevel SkillLevel           @default(OPEN) @map("default_skill_level")
-  createdAt         DateTime             @default(now()) @map("created_at")
-  updatedAt         DateTime             @updatedAt @map("updated_at")
-  createdGroups     Group[]              @relation("GroupCreator")
+  id                String                  @id @default(cuid())
+  email             String                  @unique
+  displayName       String                  @map("display_name")
+  avatarUrl         String?                 @map("avatar_url")
+  defaultSkillLevel SkillLevel              @default(OPEN) @map("default_skill_level")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+  createdGroups     Group[]                 @relation("GroupCreator")
   groupMemberships  GroupMember[]
-  hostedSessions    Session[]            @relation("SessionHost")
+  hostedSessions    Session[]               @relation("SessionHost")
   participations    SessionParticipant[]
   notifications     Notification[]
   pushDevices       PushDevice[]
   notificationPref  NotificationPreference?
-  following         Follow[]       @relation("Follower")
-  followers         Follow[]       @relation("Followee")
+  following         Follow[]                @relation("Follower")
+  followers         Follow[]                @relation("Followee")
   savedSessions     SavedSession[]
-  reviewsReceived   Review[]       @relation("ReviewSubject")
-  reviewsAuthored   Review[]       @relation("ReviewAuthor")
+  reviewsReceived   Review[]                @relation("ReviewSubject")
+  reviewsAuthored   Review[]                @relation("ReviewAuthor")
   chatMessages      ChatMessage[]
   authIdentities    AuthIdentity[]
   refreshTokens     RefreshToken[]
@@ -111,15 +111,15 @@ model PushDevice {
 }
 
 model NotificationPreference {
-  id                    String   @id @default(cuid())
-  userId                String   @unique @map("user_id")
-  remindersEnabled      Boolean  @default(true) @map("reminders_enabled")
-  statusChangesEnabled  Boolean  @default(true) @map("status_changes_enabled")
-  waitlistEnabled       Boolean  @default(true) @map("waitlist_enabled")
-  reminderLeadMinutes   Int      @default(120) @map("reminder_lead_minutes")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String   @id @default(cuid())
+  userId               String   @unique @map("user_id")
+  remindersEnabled     Boolean  @default(true) @map("reminders_enabled")
+  statusChangesEnabled Boolean  @default(true) @map("status_changes_enabled")
+  waitlistEnabled      Boolean  @default(true) @map("waitlist_enabled")
+  reminderLeadMinutes  Int      @default(120) @map("reminder_lead_minutes")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
 }
@@ -129,6 +129,8 @@ model Group {
   name              String
   description       String?
   defaultVenueName  String?       @map("default_venue_name")
+  defaultVenueId    String?       @map("default_venue_id")
+  defaultVenue      Venue?        @relation(fields: [defaultVenueId], references: [id], onDelete: SetNull)
   defaultSkillLevel SkillLevel    @default(OPEN) @map("default_skill_level")
   currency          String        @default("VND")
   createdByUserId   String        @map("created_by_user_id")
@@ -159,40 +161,42 @@ model GroupMember {
 }
 
 model Session {
-  id                 String              @id @default(cuid())
-  groupId            String              @map("group_id")
-  hostUserId         String              @map("host_user_id")
-  title              String?
-  startsAt           DateTime            @map("starts_at")
-  endsAt             DateTime            @map("ends_at")
-  venueName          String              @map("venue_name")
-  venueNote          String?             @map("venue_note")
-  courtCount         Int                 @map("court_count")
-  maxPlayers         Int                 @map("max_players")
-  feeTotalVnd        Int?                @map("fee_total_vnd")
-  shuttlecockCostVnd Int?                @map("shuttlecock_cost_vnd")
-  currency            String             @default("VND")
-  skillLevel          SkillLevel         @default(OPEN) @map("skill_level")
-  visibility          SessionVisibility  @default(PRIVATE_LINK)
-  status              SessionStatus      @default(SCHEDULED)
-  costTrackingEnabled Boolean            @default(false) @map("cost_tracking_enabled")
-  feePerPlayerVnd     Int?               @map("fee_per_player_vnd")
-  venueLat            Float?             @map("venue_lat")
-  venueLng            Float?             @map("venue_lng")
-  imageUrls           String[]           @default([]) @map("image_urls")
-  createdAt           DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
-  group              Group               @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  host               User                @relation("SessionHost", fields: [hostUserId], references: [id])
-  courts             Court[]
-  invites            Invite[]
-  participants       SessionParticipant[]
-  lineupSlots        LineupSlot[]
-  notifications      Notification[]
-  matchResults       MatchResult[]
-  savedBy            SavedSession[]
-  reviews            Review[]
-  chatMessages       ChatMessage[]
+  id                  String               @id @default(cuid())
+  groupId             String               @map("group_id")
+  hostUserId          String               @map("host_user_id")
+  title               String?
+  startsAt            DateTime             @map("starts_at")
+  endsAt              DateTime             @map("ends_at")
+  venueName           String               @map("venue_name")
+  venueId             String?              @map("venue_id")
+  venue               Venue?               @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  venueNote           String?              @map("venue_note")
+  courtCount          Int                  @map("court_count")
+  maxPlayers          Int                  @map("max_players")
+  feeTotalVnd         Int?                 @map("fee_total_vnd")
+  shuttlecockCostVnd  Int?                 @map("shuttlecock_cost_vnd")
+  currency            String               @default("VND")
+  skillLevel          SkillLevel           @default(OPEN) @map("skill_level")
+  visibility          SessionVisibility    @default(PRIVATE_LINK)
+  status              SessionStatus        @default(SCHEDULED)
+  costTrackingEnabled Boolean              @default(false) @map("cost_tracking_enabled")
+  feePerPlayerVnd     Int?                 @map("fee_per_player_vnd")
+  venueLat            Float?               @map("venue_lat")
+  venueLng            Float?               @map("venue_lng")
+  imageUrls           String[]             @default([]) @map("image_urls")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  group               Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  host                User                 @relation("SessionHost", fields: [hostUserId], references: [id])
+  courts              Court[]
+  invites             Invite[]
+  participants        SessionParticipant[]
+  lineupSlots         LineupSlot[]
+  notifications       Notification[]
+  matchResults        MatchResult[]
+  savedBy             SavedSession[]
+  reviews             Review[]
+  chatMessages        ChatMessage[]
 
   @@index([groupId, startsAt])
   @@index([hostUserId])
@@ -249,14 +253,14 @@ model LineupSlot {
 }
 
 model Invite {
-  id        String    @id @default(cuid())
-  token     String    @unique
-  groupId   String?   @map("group_id")
-  sessionId String?   @map("session_id")
-  expiresAt DateTime  @map("expires_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-  group     Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  session   Session?  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  token     String   @unique
+  groupId   String?  @map("group_id")
+  sessionId String?  @map("session_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  group     Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([groupId])
   @@index([sessionId])
@@ -483,52 +487,70 @@ model CommunityArea {
 }
 
 model CommunityListing {
-  id                    String                     @id @default(cuid())
-  platform              CommunityPlatform          @default(FACEBOOK)
-  sourceId              String                     @map("source_id")
-  sourcePostId          String                     @map("source_post_id")
-  sourceUrl             String                     @map("source_url")
-  title                 String?
-  description           String?
-  startsAt              DateTime?                  @map("starts_at")
-  endsAt                DateTime?                  @map("ends_at")
-  timeZone              String                     @default("Asia/Ho_Chi_Minh") @map("time_zone")
-  venueName             String?                    @map("venue_name")
-  venueAddress          String?                    @map("venue_address")
-  areaCode              String?                    @map("area_code")
-  skillLevel            CommunitySkillLevel        @default(UNKNOWN) @map("skill_level")
-  skillText             String?                    @map("skill_text")
-  feeVnd                Int?                       @map("fee_vnd")
-  feeBasis              CommunityFeeBasis          @default(UNKNOWN) @map("fee_basis")
-  feeText               String?                    @map("fee_text")
-  requestedPlayers      Int?                       @map("requested_players")
-  organizerName         String?                    @map("organizer_name")
-  contacts              Json                       @default("[]")
-  scheduleKind          String                     @default("SINGLE") @map("schedule_kind")
-  rawText               String?                    @map("raw_text")
-  evidence              Json?
-  rawRetainedUntil      DateTime?                  @map("raw_retained_until")
-  sourcePostedAt        DateTime?                  @map("source_posted_at")
-  sourceUpdatedAt       DateTime?                  @map("source_updated_at")
-  observedAt            DateTime                   @map("observed_at")
-  receivedAt            DateTime                   @default(now()) @map("received_at")
-  lastVerifiedAt        DateTime                   @map("last_verified_at")
-  firstSeenAt           DateTime                   @default(now()) @map("first_seen_at")
-  publishedAt           DateTime?                  @map("published_at")
-  publicationStatus     CommunityPublicationStatus @default(NEEDS_REVIEW) @map("publication_status")
-  sourceStatus          CommunitySourceStatus      @default(UNKNOWN) @map("source_status")
-  reviewReasons         String[]                   @default([]) @map("review_reasons")
-  suppressionReason     String?                    @map("suppression_reason")
-  duplicateCandidateIds String[]                   @default([]) @map("duplicate_candidate_ids")
-  snapshotHash          String?                    @map("snapshot_hash")
-  version               Int                        @default(1)
-  anonymizedAt          DateTime?                  @map("anonymized_at")
-  createdAt             DateTime                   @default(now()) @map("created_at")
-  updatedAt             DateTime                   @updatedAt @map("updated_at")
-  source                CommunitySource            @relation(fields: [sourceId], references: [id])
-  area                  CommunityArea?             @relation(fields: [areaCode], references: [code], onDelete: SetNull)
-  operations            CommunityIngestOperation[]
-  reports               CommunityListingReport[]
+  id                          String                      @id @default(cuid())
+  platform                    CommunityPlatform           @default(FACEBOOK)
+  sourceId                    String                      @map("source_id")
+  sourcePostId                String                      @map("source_post_id")
+  sourceUrl                   String                      @map("source_url")
+  title                       String?
+  description                 String?
+  startsAt                    DateTime?                   @map("starts_at")
+  endsAt                      DateTime?                   @map("ends_at")
+  timeZone                    String                      @default("Asia/Ho_Chi_Minh") @map("time_zone")
+  venueName                   String?                     @map("venue_name")
+  venueId                     String?                     @map("venue_id")
+  venueMapsUrl                String?                     @map("venue_maps_url")
+  venue                       Venue?                      @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  venueResolutionStatus       String                      @default("UNRESOLVED") @map("venue_resolution_status")
+  venueResolverVersion        String?                     @map("venue_resolver_version")
+  venueResolutionInputHash    String?                     @map("venue_resolution_input_hash")
+  venueResolvedAt             DateTime?                   @map("venue_resolved_at")
+  venueCandidateIds           String[]                    @default([]) @map("venue_candidate_ids")
+  venueResolutionManual       Boolean                     @default(false) @map("venue_resolution_manual")
+  venueAddress                String?                     @map("venue_address")
+  areaCode                    String?                     @map("area_code")
+  skillLevel                  CommunitySkillLevel         @default(UNKNOWN) @map("skill_level")
+  skillText                   String?                     @map("skill_text")
+  skillRequirements           CommunitySkillRequirement[]
+  skillNormalizationStatus    String                      @default("UNRESOLVED") @map("skill_normalization_status")
+  skillNormalizationVersion   String?                     @map("skill_normalization_version")
+  skillNormalizationInputHash String?                     @map("skill_normalization_input_hash")
+  skillNormalizedAt           DateTime?                   @map("skill_normalized_at")
+  skillRecruitmentAudience    String                      @default("UNKNOWN") @map("skill_recruitment_audience")
+  skillNormalizationNotes     String[]                    @default([]) @map("skill_normalization_notes")
+  skillNormalizationReasons   String[]                    @default([]) @map("skill_normalization_reasons")
+  skillNormalizationManual    Boolean                     @default(false) @map("skill_normalization_manual")
+  feeVnd                      Int?                        @map("fee_vnd")
+  feeBasis                    CommunityFeeBasis           @default(UNKNOWN) @map("fee_basis")
+  feeText                     String?                     @map("fee_text")
+  requestedPlayers            Int?                        @map("requested_players")
+  organizerName               String?                     @map("organizer_name")
+  contacts                    Json                        @default("[]")
+  scheduleKind                String                      @default("SINGLE") @map("schedule_kind")
+  rawText                     String?                     @map("raw_text")
+  evidence                    Json?
+  rawRetainedUntil            DateTime?                   @map("raw_retained_until")
+  sourcePostedAt              DateTime?                   @map("source_posted_at")
+  sourceUpdatedAt             DateTime?                   @map("source_updated_at")
+  observedAt                  DateTime                    @map("observed_at")
+  receivedAt                  DateTime                    @default(now()) @map("received_at")
+  lastVerifiedAt              DateTime                    @map("last_verified_at")
+  firstSeenAt                 DateTime                    @default(now()) @map("first_seen_at")
+  publishedAt                 DateTime?                   @map("published_at")
+  publicationStatus           CommunityPublicationStatus  @default(NEEDS_REVIEW) @map("publication_status")
+  sourceStatus                CommunitySourceStatus       @default(UNKNOWN) @map("source_status")
+  reviewReasons               String[]                    @default([]) @map("review_reasons")
+  suppressionReason           String?                     @map("suppression_reason")
+  duplicateCandidateIds       String[]                    @default([]) @map("duplicate_candidate_ids")
+  snapshotHash                String?                     @map("snapshot_hash")
+  version                     Int                         @default(1)
+  anonymizedAt                DateTime?                   @map("anonymized_at")
+  createdAt                   DateTime                    @default(now()) @map("created_at")
+  updatedAt                   DateTime                    @updatedAt @map("updated_at")
+  source                      CommunitySource             @relation(fields: [sourceId], references: [id])
+  area                        CommunityArea?              @relation(fields: [areaCode], references: [code], onDelete: SetNull)
+  operations                  CommunityIngestOperation[]
+  reports                     CommunityListingReport[]
 
   @@unique([platform, sourcePostId])
   @@index([publicationStatus, startsAt, id])
@@ -580,4 +602,111 @@ model CommunityAuditLog {
 
   @@index([targetType, targetId, createdAt])
   @@map("community_audit_logs")
+}
+
+model SkillScale {
+  code    String      @id
+  version String
+  label   String
+  ranks   SkillRank[]
+
+  @@map("skill_scales")
+}
+
+model SkillRank {
+  code                String                      @id
+  scaleCode           String                      @map("scale_code")
+  label               String
+  order               Int
+  scale               SkillScale                  @relation(fields: [scaleCode], references: [code])
+  minimumRequirements CommunitySkillRequirement[] @relation("MinimumRank")
+  maximumRequirements CommunitySkillRequirement[] @relation("MaximumRank")
+
+  @@unique([scaleCode, order])
+  @@map("skill_ranks")
+}
+
+model SkillAlias {
+  id       String @id @default(cuid())
+  token    String
+  rankCode String @map("rank_code")
+  scope    String @default("")
+  version  String
+
+  @@unique([token, scope])
+  @@map("skill_aliases")
+}
+
+model CommunitySkillRequirement {
+  id           String           @id @default(cuid())
+  listingId    String           @map("listing_id")
+  audience     String
+  mode         String
+  minRank      String?          @map("min_rank")
+  maxRank      String?          @map("max_rank")
+  minInclusive Boolean          @default(true) @map("min_inclusive")
+  maxInclusive Boolean          @default(true) @map("max_inclusive")
+  alternative  Int              @default(0)
+  evidence     String
+  listing      CommunityListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  minimum      SkillRank?       @relation("MinimumRank", fields: [minRank], references: [code])
+  maximum      SkillRank?       @relation("MaximumRank", fields: [maxRank], references: [code])
+
+  @@unique([listingId, audience, alternative])
+  @@index([audience, minRank, maxRank])
+  @@map("community_skill_requirements")
+}
+
+model Venue {
+  id                 String             @id @default(cuid())
+  name               String
+  address            String?
+  areaCode           String?            @map("area_code")
+  status             String             @default("UNVERIFIED")
+  latitude           Float?
+  longitude          Float?
+  locationSource     String?            @map("location_source")
+  locationVerifiedAt DateTime?          @map("location_verified_at")
+  locationExpiresAt  DateTime?          @map("location_expires_at")
+  verifiedAt         DateTime?          @map("verified_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  aliases            VenueAlias[]
+  externalRefs       VenueExternalRef[]
+  listings           CommunityListing[]
+  sessions           Session[]
+  groups             Group[]
+
+  @@index([areaCode, name])
+  @@map("venues")
+}
+
+model VenueAlias {
+  id                String   @id @default(cuid())
+  venueId           String   @map("venue_id")
+  name              String
+  normalizedName    String   @map("normalized_name")
+  normalizedAddress String   @default("") @map("normalized_address")
+  areaCode          String   @default("") @map("area_code")
+  sourceId          String   @default("") @map("source_id")
+  verifiedAt        DateTime @default(now()) @map("verified_at")
+  venue             Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, normalizedName, normalizedAddress, areaCode, sourceId])
+  @@index([normalizedName, areaCode])
+  @@map("venue_aliases")
+}
+
+model VenueExternalRef {
+  id        String    @id @default(cuid())
+  venueId   String    @map("venue_id")
+  provider  String
+  placeId   String    @map("place_id")
+  url       String?
+  fetchedAt DateTime? @map("fetched_at")
+  expiresAt DateTime? @map("expires_at")
+  venue     Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, placeId])
+  @@map("venue_external_refs")
 }

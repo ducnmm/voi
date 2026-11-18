@@ -30,6 +30,7 @@ export const CreateGroupSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(280).optional(),
   defaultVenueName: z.string().trim().max(120).optional(),
+  defaultVenueId:z.string().min(1).max(128).nullable().optional(),
   defaultSkillLevel: SkillLevelSchema.default("OPEN"),
 });
 
@@ -38,6 +39,7 @@ export const CreateSessionSchema = z.object({
   startsAt: z.string().datetime(),
   endsAt: z.string().datetime(),
   venueName: z.string().trim().min(1).max(120),
+  venueId:z.string().min(1).max(128).nullable().optional(),
   venueNote: z.string().trim().max(240).optional(),
   courtCount: z.number().int().min(1).max(20),
   maxPlayers: z.number().int().min(1).max(80).optional(),
@@ -57,6 +59,7 @@ export const UpdateSessionSchema = z.object({
   startsAt: z.string().datetime().optional(),
   endsAt: z.string().datetime().optional(),
   venueName: z.string().trim().min(1).max(120).optional(),
+  venueId:z.string().min(1).max(128).nullable().optional(),
   venueNote: z.string().trim().max(240).optional(),
   courtCount: z.number().int().min(1).max(20).optional(),
   maxPlayers: z.number().int().min(1).max(80).optional(),
@@ -75,6 +78,7 @@ export const SessionFeedQuerySchema = z.object({
   scope: z.enum(["upcoming", "past"]).default("upcoming"),
   skill: SkillLevelSchema.optional(),
   venue: z.string().trim().min(1).max(120).optional(),
+  venueId:z.string().min(1).max(128).optional(),
   availableOnly: z
     .enum(["true", "false"])
     .optional()
@@ -159,3 +163,5 @@ export const UpdateNotificationPreferenceSchema = z.object({
 });
 
 export * from "./community-listings.js";
+
+export * from "./skill-normalization.js";

@@ -9,6 +9,8 @@ import { usePublicResource } from "@/lib/use-public-resource";
 import { Icon } from "./icon";
 import { Empty, Title } from "./primitives";
 import { Select } from "./select";
+import { CommunityNormalizationFilters } from "./community-normalization-filters";
+import { emptyNormalizationFilters, normalizationQuery, normalizedSkillLabel } from "@/lib/normalization";
 
 type Feed = { listings: CommunityListingDTO[]; nextCursor: string | null };
 
@@ -18,7 +20,8 @@ export function CommunityFeed() {
   const [date, setDate] = useState("");
   const [skillLevel, setSkillLevel] = useState("");
   const [revision, setRevision] = useState(0);
-  const query = new URLSearchParams({ limit: "20", ...(areaCode ? { areaCode } : {}), ...(date ? { date } : {}), ...(skillLevel ? { skillLevel } : {}) }).toString();
+  const [normalizedFilters, setNormalizedFilters] = useState(emptyNormalizationFilters);
+  const query = new URLSearchParams({ limit: "20", ...(areaCode ? { areaCode } : {}), ...(date ? { date } : {}), ...(skillLevel ? { skillLevel } : {}), ...normalizationQuery(normalizedFilters) }).toString();
   const { data: areas, error: areaError, reload: reloadAreas } = usePublicResource<{ areas: { code: string; label: string }[] }>("/community-listings/areas");
   const [feed, setFeed] = useState<Feed | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,8 +59,8 @@ export function CommunityFeed() {
       if (current === generation.current) setLoadingMore(false);
     }
   };
-  const hasFilters = Boolean(areaCode || date || skillLevel);
-  const reset = () => { setAreaCode(""); setDate(""); setSkillLevel(""); };
+  const hasFilters = Boolean(areaCode || date || skillLevel || normalizedFilters.audience || normalizedFilters.rank || normalizedFilters.venueId);
+  const reset = () => { setAreaCode(""); setDate(""); setSkillLevel(""); setNormalizedFilters(emptyNormalizationFilters); };
   return (
     <div className="community-feed community-surface">
       <Title title={t("Khám phá")} action={
@@ -84,6 +87,7 @@ export function CommunityFeed() {
                 {Object.entries(communitySkillLabels).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
               </Select>
             </label>
+            <CommunityNormalizationFilters value={normalizedFilters} onChange={value => { setNormalizedFilters(value); if (value.rank) setSkillLevel(""); }} areaCode={areaCode} />
             {hasFilters && <button className="btn btn-ghost community-clear" onClick={reset}>{t("Xóa bộ lọc")}</button>}
           </div>
           {areaError && <p className="community-inline-note" role="status">{t("Chưa tải được khu vực.")} <button className="community-text-button" onClick={reloadAreas}>{t("Thử lại")}</button></p>}
@@ -103,7 +107,9 @@ export function CommunityFeed() {
 
 export function CommunityListingCard({ listing }: { listing: CommunityListingDTO }) {
   const { t, locale } = useI18n();
-  const shortTitle = listing.venueName || listing.title;
+  const venue = listing.venue;
+  const skillSummary = normalizedSkillLabel(listing, t);
+  const shortTitle = venue?.name || listing.venueName || listing.title;
   const accessibleTitle = shortTitle === listing.title ? listing.title : `${shortTitle} — ${listing.title}`;
   return (
     <article className="community-card card">
@@ -117,8 +123,8 @@ export function CommunityListingCard({ listing }: { listing: CommunityListingDTO
       <h2 aria-label={accessibleTitle}><Link href={`/community-listings/${listing.id}`} aria-label={accessibleTitle}>{shortTitle}</Link></h2>
       <div className="community-card-facts">
         <div className="community-schedule"><Icon name="calendar" size={20} /><span><strong className="community-time">{communityTime(listing, locale, t)}</strong><small>{listing.startsAt ? communityDate(listing.startsAt, listing.timeZone, locale) : t("Chưa rõ ngày")}</small></span></div>
-        <div><Icon name="pin" size={20} /><span>{listing.venueAddress || listing.areaLabel || listing.areaCode || t("Chưa rõ khu vực")}{listing.venueAddress && <small>{listing.areaLabel || listing.areaCode || t("Chưa rõ khu vực")}</small>}</span></div>
-        <div className="community-skill"><Icon name="badminton" size={20} /><span>{listing.skillText || t(communitySkillLabels[listing.skillLevel])}</span></div>
+        <div><Icon name="pin" size={20} /><span>{venue?.address || listing.venueAddress || listing.areaLabel || listing.areaCode || t("Chưa rõ khu vực")}{(venue?.address || listing.venueAddress) && <small>{listing.areaLabel || listing.areaCode || t("Chưa rõ khu vực")}</small>}</span></div>
+        <div className="community-skill"><Icon name="badminton" size={20} /><span>{skillSummary || listing.skillText || t(communitySkillLabels[listing.skillLevel])}{listing.skillNormalization?.status === "PARTIAL" && <small>{t("Đã chuẩn hóa một phần")}</small>}</span></div>
       </div>
       <div className="community-card-summary">
         <div className="community-card-fee"><Icon name="info" size={19} /><span>{communityFee(listing, locale, t)}</span></div>

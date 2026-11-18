@@ -1,11 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { Prisma, type CommunityListing, type CommunitySource, type IntegrationClient } from "@prisma/client";
-import { CommunityIngestItemSchema, type CommunityBatchInput, type CommunityItemResult } from "@voi/shared";
+import { CommunityIngestItemSchema, CommunityIngestItemV2Schema, normalizeSkillText, type SkillRequirement, type SkillNormalization, type CommunityBatchInput, type CommunityItemResult } from "@voi/shared";
+import { normalizeCommunityRow } from "./community-normalization.js";
+import { normalizeMapsUrl, resolveVenue } from "./venue-catalog.js";
 import { prisma } from "../db/prisma.js";
 import { communityEffectiveStatus, communityPublicUrl } from "./community-presenter.js";
 import { communityPayloadHash, normalizeCommunityContact, normalizeCommunitySourceUrl } from "./community-validation.js";
 
 type Db = Prisma.TransactionClient;
+function requirementSignature(requirements: SkillRequirement[]): string {
+  const values = requirements.map(({ audience, mode, minRank, maxRank, minInclusive, maxInclusive }) =>
+    JSON.stringify({ audience, mode, minRank, maxRank, minInclusive, maxInclusive }));
+  return communityPayloadHash([...new Set(values)].sort());
+}
+function skillSignature(value: SkillNormalization): string {
+  return communityPayloadHash({ recruitmentAudience: value.recruitmentAudience, requirements: requirementSignature(value.requirements) });
+}
 function resultBase(index: number, operationId: string | null): CommunityItemResult {
   return { index, operationId, outcome: "rejected", replayed: false, listingId: null, publicationStatus: null, effectiveStatus: null, publicUrl: null, warnings: [], errors: [] };
 }
@@ -27,11 +37,13 @@ function newListing(source: CommunitySource, postId: string, sourceUrl: string, 
     sourcePostedAt: null, sourceUpdatedAt: null, observedAt, receivedAt: now, lastVerifiedAt: observedAt,
     firstSeenAt: now, publishedAt: null, publicationStatus: "NEEDS_REVIEW", sourceStatus: "UNKNOWN",
     reviewReasons: [], suppressionReason: null, duplicateCandidateIds: [], snapshotHash: null, version: 1,
+    venueId:null,venueMapsUrl:null,venueResolutionStatus:"UNRESOLVED",venueResolverVersion:null,venueResolutionInputHash:null,venueResolvedAt:null,venueCandidateIds:[],venueResolutionManual:false,
+    skillNormalizationStatus:"UNRESOLVED",skillNormalizationVersion:null,skillNormalizationInputHash:null,skillNormalizedAt:null,skillRecruitmentAudience:"UNKNOWN",skillNormalizationNotes:[],skillNormalizationReasons:[],skillNormalizationManual:false,
     anonymizedAt: null, createdAt: now, updatedAt: now
   };
 }
-async function applyItem(db: Db, raw: unknown, base: CommunityItemResult, dryRun: boolean): Promise<CommunityItemResult> {
-  const parsed = CommunityIngestItemSchema.safeParse(raw);
+async function applyItem(db: Db, raw: unknown, base: CommunityItemResult, dryRun: boolean, schemaVersion:1|2): Promise<CommunityItemResult> {
+  const parsed = (schemaVersion===2?CommunityIngestItemV2Schema:CommunityIngestItemSchema).safeParse(raw);
   if (!parsed.success) return { ...base, errors: parsed.error.issues.map((issue) => ({ code: "INVALID_ITEM", field: issue.path.join("."), message: "Invalid or missing field" })) };
   const item = parsed.data;
   const now = new Date();
@@ -65,7 +77,24 @@ async function applyItem(db: Db, raw: unknown, base: CommunityItemResult, dryRun
     next.sourceStatus = "DELETED";
     next.sourceUrl = sourceUrl;
   } else {
-    const snapshot = item.listing;
+    const snapshot = item.listing as typeof item.listing & {venueId?:string|null;venueMapsUrl?:string|null;skillProposal?:{scaleCode:string;requirements:SkillRequirement[];recruitmentAudience?:SkillNormalization["recruitmentAudience"]}|null};
+    const proposedVenueId="venueId" in snapshot?snapshot.venueId:undefined;
+    const sourceMapsUrl="venueMapsUrl" in snapshot?snapshot.venueMapsUrl:undefined;
+    if(sourceMapsUrl&&!normalizeMapsUrl(sourceMapsUrl)) return reject(result,"INVALID_MAPS_URL","listing.venueMapsUrl");
+    const skillEvidence="skill" in item.evidence&&typeof item.evidence.skill==="string"?item.evidence.skill:undefined;
+    if(schemaVersion===2&&snapshot.skillText){
+      const fold=(value:string)=>value.replace(/\s+/g," ").trim().toLocaleLowerCase("vi");
+      if(!skillEvidence?.trim()||!fold(item.rawText).includes(fold(skillEvidence)))return reject(result,"MISSING_SKILL_EVIDENCE","evidence.skill");
+      if(skillSignature(normalizeSkillText(snapshot.skillText))!==skillSignature(normalizeSkillText(skillEvidence)))return reject(result,"SKILL_EVIDENCE_MISMATCH","evidence.skill","Source evidence must support the complete audience and rank requirements");
+    }
+    if("skillProposal" in snapshot&&snapshot.skillProposal){
+      const parsedSkill=normalizeSkillText(snapshot.skillText),proposal=snapshot.skillProposal;
+      if(proposal.scaleCode!==parsedSkill.scaleCode||requirementSignature(proposal.requirements)!==requirementSignature(parsedSkill.requirements)||(proposal.recruitmentAudience!==undefined&&proposal.recruitmentAudience!==parsedSkill.recruitmentAudience)) return reject(result,"UNSUPPORTED_SKILL_PROPOSAL","listing.skillProposal","Skill proposal must match the backend dictionary and source text");
+      const normalized=(value:string)=>value.replace(/\s+/g," ").trim().toLocaleLowerCase("vi");
+      if(!skillEvidence?.trim()||!normalized(item.rawText).includes(normalized(skillEvidence))||proposal.requirements.some(rule=>!rule.evidence.trim()||!normalized(item.rawText).includes(normalized(rule.evidence)))) return reject(result,"MISSING_SKILL_EVIDENCE","listing.skillProposal");
+    }
+    if(proposedVenueId){try{await resolveVenue(db,{venueName:snapshot.venueName,venueAddress:snapshot.venueAddress,areaCode:snapshot.areaCode,sourceId:source.id,venueId:proposedVenueId});}catch{return reject(result,"INVALID_VENUE_PROPOSAL","listing.venueId");}}
+    const {venueId:_venueId,venueMapsUrl:_maps,skillProposal:_skill,...sourceSnapshot}=snapshot as typeof snapshot & {venueId?:string|null;venueMapsUrl?:string|null;skillProposal?:unknown};
     const contacts = snapshot.contacts.map(normalizeCommunityContact);
     if (contacts.some((contact) => contact === null)) return reject(result, "INVALID_CONTACT", "listing.contacts", "Contact must use a supported phone number or secure host");
     const area = snapshot.areaCode ? await db.communityArea.findUnique({ where: { code: snapshot.areaCode } }) : null;
@@ -80,7 +109,8 @@ async function applyItem(db: Db, raw: unknown, base: CommunityItemResult, dryRun
       if (snapshotHash !== existing.snapshotHash) return reject(result, "OBSERVATION_CONFLICT", "observedAt", "Different snapshots have the same observation time");
       return { ...result, outcome: "unchanged" };
     }
-    Object.assign(next, snapshot, {
+    Object.assign(next, sourceSnapshot, {
+      venueMapsUrl:sourceMapsUrl===undefined?existing?.venueMapsUrl??null:sourceMapsUrl,
       contacts, startsAt: snapshot.startsAt ? new Date(snapshot.startsAt) : null,
       endsAt: snapshot.endsAt ? new Date(snapshot.endsAt) : null,
       sourceUrl, sourcePostedAt: item.sourcePostedAt ? new Date(item.sourcePostedAt) : null,
@@ -102,8 +132,9 @@ async function applyItem(db: Db, raw: unknown, base: CommunityItemResult, dryRun
     next.reviewReasons = reasons;
     next.publicationStatus = reasons.length ? "NEEDS_REVIEW" : "PUBLISHED";
     if (next.publicationStatus === "PUBLISHED" && !next.publishedAt) next.publishedAt = now;
+    const venueResolution=await resolveVenue(db,{venueName:next.venueName,venueAddress:next.venueAddress,areaCode:next.areaCode,sourceId:next.sourceId});
     if (next.startsAt && next.venueName && contacts.length) {
-      const candidates = await db.communityListing.findMany({ where: { id: { not: next.id }, startsAt: next.startsAt, venueName: next.venueName, sourceStatus: { not: "DELETED" } }, select: { id: true, contacts: true }, take: 25 });
+      const candidates = await db.communityListing.findMany({ where: { id: { not: next.id }, startsAt: next.startsAt, ...(venueResolution.venueId?{OR:[{venueId:venueResolution.venueId},{venueName:next.venueName}]}:{venueName:next.venueName}), sourceStatus: { not: "DELETED" } }, select: { id: true, contacts: true }, take: 25 });
       const values = new Set(contacts.map((contact) => `${contact!.type}:${contact!.value}`));
       next.duplicateCandidateIds = candidates.filter((candidate) => Array.isArray(candidate.contacts) && candidate.contacts.some((contact) => contact && typeof contact === "object" && !Array.isArray(contact) && values.has(`${contact.type}:${contact.value}`))).map((candidate) => candidate.id);
     } else next.duplicateCandidateIds = [];
@@ -119,6 +150,10 @@ async function applyItem(db: Db, raw: unknown, base: CommunityItemResult, dryRun
     const data = { ...next, contacts: next.contacts as Prisma.InputJsonValue, evidence: next.evidence === null ? Prisma.DbNull : next.evidence as Prisma.InputJsonValue };
     if (existing) await db.communityListing.update({ where: { id: existing.id }, data });
     else await db.communityListing.create({ data });
+  }
+  if(item.action==="UPSERT"){
+    const normalization=await normalizeCommunityRow(db,next,{dryRun,now});
+    Object.assign(next,normalization.data);
   }
   result = resultFor(base, next, source, now, Boolean(existing) || !dryRun);
   if (next.duplicateCandidateIds.length) result.warnings.push("POSSIBLE_DUPLICATE");
@@ -141,7 +176,7 @@ export async function ingestCommunityBatch(client: IntegrationClient, batch: Com
             return { ...(previous.result as unknown as CommunityItemResult), index, replayed: true };
           }
         }
-        const applied = await applyItem(tx, raw, base, batch.dryRun);
+        const applied = await applyItem(tx, raw, base, batch.dryRun,batch.schemaVersion);
         if (!batch.dryRun && operationId) await tx.communityIngestOperation.create({ data: { integrationClientId: client.id, operationId, payloadHash, result: applied as unknown as Prisma.InputJsonValue, listingId: applied.listingId } });
         return applied;
       }, { timeout: 15000 });

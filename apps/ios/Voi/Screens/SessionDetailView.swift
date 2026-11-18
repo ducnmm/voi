@@ -277,18 +277,27 @@ struct SessionDetailView: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(VoiColor.ink)
                 Spacer()
-                Button { openDirections(coordinate) } label: {
-                    Label("Directions", systemImage: "location.fill")
+                if let coordinate {
+                    Button { openDirections(coordinate) } label: {
+                        Label("Directions", systemImage: "location.fill")
+                            .font(.subheadline.weight(.medium))
+                    }
+                } else if let url = session.venueSearchURL {
+                    Link("Find venue", destination: url)
                         .font(.subheadline.weight(.medium))
                 }
             }
-            Map(initialPosition: .region(MKCoordinateRegion(center: coordinate, latitudinalMeters: 700, longitudinalMeters: 700))) {
-                Marker(session.venueName, coordinate: coordinate)
-                    .tint(VoiColor.court)
+            if let coordinate {
+                Map(initialPosition: .region(MKCoordinateRegion(center: coordinate, latitudinalMeters: 700, longitudinalMeters: 700))) {
+                    Marker(session.venueName, coordinate: coordinate)
+                        .tint(VoiColor.court)
+                }
+                .frame(height: 140)
+                .clipShape(RoundedRectangle(cornerRadius: VoiRadius.control, style: .continuous))
+                .allowsHitTesting(false)
+            } else {
+                Text("Venue coordinates have not been verified.").font(.footnote).foregroundStyle(VoiColor.muted)
             }
-            .frame(height: 140)
-            .clipShape(RoundedRectangle(cornerRadius: VoiRadius.control, style: .continuous))
-            .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .voiCard()

@@ -10,8 +10,15 @@ struct MapBrowseView: View {
         NavigationStack {
             Map {
                 ForEach(sessions) { session in
-                    Marker(session.title, systemImage: "figure.badminton", coordinate: session.mapCoordinate)
-                        .tint(VoiColor.court)
+                    if let coordinate = session.mapCoordinate {
+                        Marker(session.title, systemImage: "figure.badminton", coordinate: coordinate)
+                            .tint(VoiColor.court)
+                    }
+                }
+            }
+            .overlay {
+                if sessions.allSatisfy({ $0.mapCoordinate == nil }) {
+                    ContentUnavailableView("No venue locations", systemImage: "mappin.slash", description: Text("Venue coordinates have not been verified."))
                 }
             }
             .accessibilityIdentifier(A11y.Map.screen)

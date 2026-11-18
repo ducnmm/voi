@@ -35,8 +35,9 @@ def origin_url(value):
 
 def check_payload(payload, config):
     """Preflight identity/scope checks; backend remains the full schema authority."""
-    if set(payload) - {"schemaVersion", "runId", "dryRun", "items"} or payload.get("schemaVersion") != 1:
-        raise ValueError("Use only the Voi schemaVersion=1 batch envelope")
+    version = payload.get("schemaVersion")
+    if set(payload) - {"schemaVersion", "runId", "dryRun", "items"} or type(version) is not int or version not in {1, 2}:
+        raise ValueError("Use a Voi schemaVersion=1 or schemaVersion=2 batch envelope")
     if not isinstance(payload.get("runId"), str) or not 1 <= len(payload["runId"]) <= 128:
         raise ValueError("runId is required (1..128 characters)")
     items = payload.get("items")
@@ -68,6 +69,20 @@ def check_payload(payload, config):
             raise ValueError(f"Item {index}: invalid action")
         if action == "UPSERT":
             listing = item.get("listing", {})
+            if not isinstance(listing, dict):
+                raise ValueError(f"Item {index}: listing object required")
+            normalization_fields = {"venueId", "venueMapsUrl", "skillProposal"}
+            if version == 1 and (normalization_fields.intersection(listing) or "skill" in item.get("evidence", {})):
+                raise ValueError(f"Item {index}: normalization proposals require schemaVersion=2")
+            if version == 2:
+                skill_text = listing.get("skillText")
+                skill_quote = item.get("evidence", {}).get("skill")
+                if skill_text is not None and (not isinstance(skill_quote, str) or not skill_quote.strip()):
+                    raise ValueError(f"Item {index}: v2 skillText requires a nonempty evidence.skill source quote")
+                if listing.get("venueId") is not None and (not isinstance(listing["venueId"], str) or not listing["venueId"].strip()):
+                    raise ValueError(f"Item {index}: venueId must be an existing Voi venue ID or null")
+                if listing.get("skillProposal") is not None and not isinstance(listing["skillProposal"], dict):
+                    raise ValueError(f"Item {index}: skillProposal must be an object or null")
             if listing.get("areaCode") is not None and listing["areaCode"] not in areas:
                 raise ValueError(f"Item {index}: areaCode not configured")
             if listing.get("scheduleKind", "SINGLE") not in {"SINGLE", "MULTIPLE", "RECURRING", "UNCLEAR"}:
@@ -135,7 +150,7 @@ def print_result(value):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["validate", "batch", "get", "recheck"])
+    parser.add_argument("command", choices=["validate", "batch", "get", "recheck", "catalog"])
     parser.add_argument("--config", required=True)
     parser.add_argument("--key-file", help="Secret file; alternatively VOI_INTEGRATION_KEY")
     parser.add_argument("--file", help="Prepared Voi batch JSON")
@@ -156,6 +171,9 @@ def main():
             return 0
     token = read_token(args)
     base = "/v1/integrations/community-listings"
+    if args.command == "catalog":
+        print_result(request_json(origin, token, "GET", base + "/catalog"))
+        return 0
     if args.command == "get":
         if not args.id:
             raise ValueError("--id required")

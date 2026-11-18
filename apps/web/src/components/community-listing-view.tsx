@@ -10,6 +10,7 @@ import { Dialog } from "./dialog";
 import { Icon } from "./icon";
 import { Empty } from "./primitives";
 import { Select } from "./select";
+import { normalizedSkillLabel, validVenueCoordinate, venueMapsHref } from "@/lib/normalization";
 
 const reportTypes = {
   WRONG_INFO: "Thông tin không đúng",
@@ -48,6 +49,9 @@ function ListingContent({ listing }: { listing: CommunityListingDTO }) {
     return href ? [{ ...contact, href }] : [];
   });
   const active = listing.effectiveStatus === "OPEN";
+  const venue = listing.venue;
+  const skillSummary = normalizedSkillLabel(listing, t);
+  const mapsHref = venueMapsHref(venue, listing.venueName, listing.venueAddress, listing.areaLabel);
   return <article className="community-detail">
     <header className="community-detail-header">
       <div className="community-source"><Icon name="globe" size={16} /><span>{listing.source.name}</span></div>
@@ -60,8 +64,8 @@ function ListingContent({ listing }: { listing: CommunityListingDTO }) {
         <section className="card community-details" aria-label={t("Thông tin kèo")}>
           <dl>
             <div><dt><Icon name="calendar" size={19} />{t("Thời gian")}</dt><dd>{listing.startsAt ? communityDate(listing.startsAt, listing.timeZone, locale) : t("Chưa rõ ngày")}<span>{communityTime(listing, locale, t)}</span>{listing.timeZone === "Asia/Ho_Chi_Minh" && <small>{t("Giờ Việt Nam")}</small>}</dd></div>
-            <div><dt><Icon name="pin" size={19} />{t("Sân")}</dt><dd>{listing.venueName || t("Chưa rõ sân")}<span>{listing.venueAddress || t("Chưa rõ địa chỉ chi tiết")}</span><small>{listing.areaLabel || listing.areaCode || t("Chưa rõ khu vực")}</small></dd></div>
-            <div><dt><Icon name="badminton" size={19} />{t("Trình độ")}</dt><dd>{listing.skillText || t(communitySkillLabels[listing.skillLevel])}</dd></div>
+            <div><dt><Icon name="pin" size={19} />{t("Sân")}</dt><dd>{venue?.name || listing.venueName || t("Chưa rõ sân")}<span>{venue?.address || listing.venueAddress || t("Chưa rõ địa chỉ chi tiết")}</span><small>{listing.areaLabel || listing.areaCode || t("Chưa rõ khu vực")}</small>{mapsHref && <a className="community-text-button" href={mapsHref} target="_blank" rel="noopener noreferrer">{validVenueCoordinate(venue) ? t("Mở Google Maps") : t("Tìm sân trên Google Maps")}</a>}{!validVenueCoordinate(venue) && <small>{t("Chưa xác minh tọa độ sân")}</small>}</dd></div>
+            <div><dt><Icon name="badminton" size={19} />{t("Trình độ")}</dt><dd>{skillSummary || listing.skillText || t(communitySkillLabels[listing.skillLevel])}{skillSummary && listing.skillText && <small>{t("Bài gốc")}: {listing.skillText}</small>}{listing.skillNormalization?.status === "PARTIAL" && <small>{t("Đã chuẩn hóa một phần")}</small>}</dd></div>
             <div><dt><Icon name="info" size={19} />{t("Phí")}</dt><dd>{communityFee(listing, locale, t)}</dd></div>
             <div><dt><Icon name="people" size={19} />{t("Số người tuyển")}</dt><dd>{listing.requestedPlayers === null ? t("Chưa rõ số người tuyển") : t("Bài đăng tuyển {0} người", [listing.requestedPlayers])}</dd></div>
           </dl>

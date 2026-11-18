@@ -15,6 +15,14 @@ final class APIClient: @unchecked Sendable {
         self.decoder = JSONDecoder()
     }
 
+    func venues(query: String) async throws -> VenuesResponse {
+        try await send(
+            APIRequest<EmptyBody, VenuesResponse>(method: .get, path: "venues", queryItems: [
+                URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: "20")
+            ])
+        )
+    }
+
     func health() async throws -> HealthResponse {
         try await send(
             APIRequest<EmptyBody, HealthResponse>(

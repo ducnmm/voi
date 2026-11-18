@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { CreateGroupSchema, DEFAULT_CURRENCY } from "@voi/shared";
+import {selectedNativeVenue} from "../services/venue-catalog.js";
 import { prisma } from "../db/prisma.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
 import { forbidden, notFound } from "../utils/api-error.js";
@@ -37,6 +38,7 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
         name: group.name,
         description: group.description,
         defaultVenueName: group.defaultVenueName,
+        defaultVenueId:group.defaultVenueId,
         defaultSkillLevel: group.defaultSkillLevel,
         currency: group.currency,
         memberCount: group._count.members,
@@ -49,11 +51,13 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
     const userId = getAuthenticatedUserId(request);
     const body = CreateGroupSchema.parse(request.body);
 
+    const venue=await selectedNativeVenue(prisma,body.defaultVenueId);
     const group = await prisma.group.create({
       data: {
         name: body.name,
         description: body.description,
-        defaultVenueName: body.defaultVenueName,
+        defaultVenueName: venue?.name??body.defaultVenueName,
+        defaultVenueId:venue?.id??null,
         defaultSkillLevel: body.defaultSkillLevel,
         currency: DEFAULT_CURRENCY,
         createdByUserId: userId,
@@ -75,6 +79,7 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
         name: group.name,
         description: group.description,
         defaultVenueName: group.defaultVenueName,
+        defaultVenueId:group.defaultVenueId,
         defaultSkillLevel: group.defaultSkillLevel,
         currency: group.currency,
         memberCount: group.members.length
@@ -118,6 +123,7 @@ export async function groupRoutes(app: FastifyInstance): Promise<void> {
         name: group.name,
         description: group.description,
         defaultVenueName: group.defaultVenueName,
+        defaultVenueId:group.defaultVenueId,
         defaultSkillLevel: group.defaultSkillLevel,
         currency: group.currency,
         members: group.members.map((member) => ({

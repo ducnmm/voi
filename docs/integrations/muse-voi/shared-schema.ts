@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { SkillNormalization, SkillRequirement } from "./skill-normalization.js";
 
 export const CommunitySkillLevelSchema = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED", "OPEN", "UNKNOWN"]);
 export const CommunityFeeBasisSchema = z.enum(["PER_PERSON", "PER_HOUR", "TOTAL", "OTHER", "UNKNOWN"]);
@@ -10,7 +11,7 @@ const nullableText = (max: number) => z.string().trim().min(1).max(max).nullable
 export const CommunityContactSchema = z.object({
   type: z.enum(["ZALO", "FACEBOOK", "PHONE"]), value: z.string().trim().min(1).max(500)
 }).strict();
-export const CommunitySnapshotSchema = z.object({
+const CommunitySnapshotBaseSchema = z.object({
   title: z.string().trim().min(1).max(160), description: nullableText(2000),
   startsAt: isoDate.nullable(), endsAt: isoDate.nullable(),
   timeZone: z.string().min(1).max(80).refine((zone) => {
@@ -23,11 +24,23 @@ export const CommunitySnapshotSchema = z.object({
   organizerName: nullableText(160), contacts: z.array(CommunityContactSchema).max(5),
   sourceStatus: CommunitySourceStatusSchema.exclude(["DELETED"]),
   scheduleKind: z.enum(["SINGLE", "MULTIPLE", "RECURRING", "UNCLEAR"]).default("SINGLE")
-}).strict().superRefine((value, ctx) => {
+}).strict();
+const refineSnapshot = (value: {startsAt:string|null;endsAt:string|null}, ctx: z.RefinementCtx) => {
   if (value.endsAt && (!value.startsAt || Date.parse(value.endsAt) <= Date.parse(value.startsAt))) {
     ctx.addIssue({ code: "custom", path: ["endsAt"], message: "End must follow start" });
   }
-});
+};
+export const CommunitySnapshotSchema = CommunitySnapshotBaseSchema.superRefine(refineSnapshot);
+export const SkillRequirementProposalSchema = z.object({
+  audience:z.enum(["ALL","MALE","FEMALE"]), mode:z.enum(["RANGE","UNRESTRICTED","UNKNOWN"]),
+  minRank:z.string().max(40).nullable(),maxRank:z.string().max(40).nullable(),
+  minInclusive:z.boolean(),maxInclusive:z.boolean(),alternative:z.number().int().min(0).max(30),evidence:z.string().max(500)
+}).strict();
+export const CommunitySnapshotV2Schema = CommunitySnapshotBaseSchema.extend({
+  venueId:z.string().min(1).max(128).nullable().optional(),
+  venueMapsUrl:z.string().url().max(1000).nullable().optional(),
+  skillProposal:z.object({scaleCode:z.literal("VN_COMMUNITY_V1"),requirements:z.array(SkillRequirementProposalSchema).max(30),recruitmentAudience:z.enum(["UNKNOWN","ANY","MALE_ONLY","FEMALE_ONLY"]).optional()}).strict().nullable().optional()
+}).superRefine(refineSnapshot);
 const itemBase = {
   operationId: z.string().min(1).max(128), sourceId: z.string().min(1).max(128),
   sourcePostId: z.string().regex(/^\d{1,40}$/), sourceUrl: z.string().url().max(1000), observedAt: isoDate
@@ -39,8 +52,14 @@ export const CommunityIngestItemSchema = z.discriminatedUnion("action", [
   }).strict(),
   z.object({ ...itemBase, action: z.literal("SOURCE_DELETED") }).strict()
 ]);
+export const CommunityIngestItemV2Schema = z.discriminatedUnion("action", [
+  z.object({ ...itemBase, action:z.literal("UPSERT"),sourcePostedAt:isoDate.nullable(),sourceUpdatedAt:isoDate.nullable(),rawText:z.string().max(20000),listing:CommunitySnapshotV2Schema,
+    evidence:z.object({schedule:z.string().max(1000).optional(),venue:z.string().max(1000).optional(),skill:z.string().max(1000).optional(),fee:z.string().max(1000).optional(),requestedPlayers:z.string().max(1000).optional(),contacts:z.string().max(1000).optional(),sourceStatus:z.string().max(1000).optional()}).strict()
+  }).strict(),
+  z.object({...itemBase,action:z.literal("SOURCE_DELETED")}).strict()
+]);
 export const CommunityBatchSchema = z.object({
-  schemaVersion: z.literal(1), runId: z.string().min(1).max(128), dryRun: z.boolean().default(false), items: z.array(z.unknown()).min(1).max(25)
+  schemaVersion: z.union([z.literal(1),z.literal(2)]), runId: z.string().min(1).max(128), dryRun: z.boolean().default(false), items: z.array(z.unknown()).min(1).max(25)
 }).strict().superRefine((batch, ctx) => {
   const ids = new Set<string>();
   batch.items.forEach((item, index) => {
@@ -54,6 +73,7 @@ export const CommunityBatchSchema = z.object({
 export const CommunityFeedQuerySchema = z.object({
   areaCode: z.string().min(1).max(80).optional(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   timeZone: z.string().max(80).refine((zone) => { try { new Intl.DateTimeFormat("en", { timeZone: zone }); return true; } catch { return false; } }, "Invalid time zone").default("Asia/Ho_Chi_Minh"), skillLevel: CommunitySkillLevelSchema.optional(),
+  audience:z.enum(["ALL","MALE","FEMALE"]).optional(),rank:z.string().min(1).max(40).optional(),includeUnknown:z.enum(["true","false"]).default("false"),venueId:z.string().min(1).max(128).optional(),
   cursor: z.string().min(1).max(1000).optional(), limit: z.coerce.number().int().min(1).max(50).default(20)
 }).strict();
 export const CommunityRecheckQuerySchema = z.object({
@@ -64,7 +84,7 @@ export const CommunityReportSchema = z.object({
   type: z.enum(["WRONG_INFO", "FULL", "CANCELLED", "REMOVAL_REQUEST"]),
   note: z.string().trim().max(1000).optional(), reporterContact: z.string().trim().max(200).optional()
 }).strict();
-export type CommunityIngestItem = z.infer<typeof CommunityIngestItemSchema>;
+export type CommunityIngestItem = z.infer<typeof CommunityIngestItemSchema> | z.infer<typeof CommunityIngestItemV2Schema>;
 export type CommunityBatchInput = z.infer<typeof CommunityBatchSchema>;
 export type CommunityContact = z.infer<typeof CommunityContactSchema>;
 export type CommunityFeedQuery = z.infer<typeof CommunityFeedQuerySchema>;
@@ -78,7 +98,10 @@ export type CommunityItemResult = {
   errors: { code: string; field: string | null; message: string }[];
 };
 export type CommunityBatchResponse = { runId: string; dryRun: boolean; results: CommunityItemResult[] };
+export type PublicSkillNormalization = Omit<SkillNormalization,"requirements"> & {requirements:Omit<SkillRequirement,"evidence">[]};
+export type VenueDTO = {id:string;name:string;address:string|null;areaCode:string|null;latitude:number|null;longitude:number|null;mapsUrl:string;locationVerified:boolean;status:string};
 export type CommunityListingDTO = {
+  venueId?:string|null;venue?:VenueDTO|null;skillNormalization?:PublicSkillNormalization;venueResolution?:{status:string;version:string|null;candidateIds:string[]};
   id: string; title: string; description: string | null; startsAt: string | null; endsAt: string | null; timeZone: string;
   venueName: string | null; venueAddress: string | null; areaCode: string | null; areaLabel: string | null;
   skillLevel: z.infer<typeof CommunitySkillLevelSchema>; skillText: string | null;

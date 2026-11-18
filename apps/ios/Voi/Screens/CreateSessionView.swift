@@ -15,6 +15,9 @@ struct CreateSessionView: View {
 
     @State private var title: String
     @State private var venueName: String
+    @State private var venueId: String?
+    @State private var selectedVenue: VenueDTO?
+    @State private var venueOptions: [VenueDTO] = []
     @State private var startsAt: Date
     @State private var endsAt: Date
     @State private var courtCount: Int
@@ -47,6 +50,8 @@ struct CreateSessionView: View {
         let defaultStart = Date().addingTimeInterval(24 * 60 * 60)
         _title = State(initialValue: source?.title ?? "Tuesday Night Badminton")
         _venueName = State(initialValue: source?.venueName ?? "Ky Hoa Badminton")
+        _venueId = State(initialValue: source?.venueId)
+        _selectedVenue = State(initialValue: source?.venue)
         _startsAt = State(initialValue: (source?.startsAt ?? defaultStart).addingTimeInterval(offset))
         _endsAt = State(initialValue: (source?.endsAt ?? defaultStart.addingTimeInterval(60 * 60 * 2)).addingTimeInterval(offset))
         _courtCount = State(initialValue: source?.courtCount ?? 2)
@@ -80,6 +85,25 @@ struct CreateSessionView: View {
                         .accessibilityIdentifier(A11y.Create.title)
                     TextField("Venue", text: $venueName)
                         .accessibilityIdentifier(A11y.Create.venue)
+                        .onChange(of: venueName) { _, value in
+                            if selectedVenue?.name != value { venueId = nil; selectedVenue = nil }
+                        }
+                    Picker("Venue branch", selection: Binding(get: { venueId ?? "" }, set: { id in
+                        let venue = venueOptions.first { $0.id == id } ?? (selectedVenue?.id == id ? selectedVenue : nil)
+                        selectedVenue = venue
+                        venueId = venue?.id
+                        if let venue { venueName = venue.name }
+                    })) {
+                        Text("Use entered venue name").tag("")
+                        ForEach(venueOptions) { venue in
+                            Text([venue.name, venue.address].compactMap { $0 }.joined(separator: " · ")).tag(venue.id)
+                        }
+                        if let selectedVenue, !venueOptions.contains(where: { $0.id == selectedVenue.id }) {
+                            Text(selectedVenue.name).tag(selectedVenue.id)
+                        }
+                    }
+                    .accessibilityIdentifier("create.venueBranch")
+                    if let address = selectedVenue?.address { Text(address).font(.footnote).foregroundStyle(VoiColor.muted) }
                     Picker("Level", selection: $skillLevel) {
                         ForEach(SkillLevel.allCases) { level in
                             Text(level.label).tag(level)
@@ -149,6 +173,15 @@ struct CreateSessionView: View {
                     .accessibilityIdentifier(A11y.Create.submit)
                 }
             }
+            .task(id: venueName) {
+                let query = venueName.trimmingCharacters(in: .whitespacesAndNewlines)
+                do {
+                    try await Task.sleep(for: .milliseconds(300))
+                    let response = try await environment.apiClient.venues(query: query)
+                    guard !Task.isCancelled else { return }
+                    venueOptions = response.venues
+                } catch { /* Free-form venue entry remains available offline. */ }
+            }
             .onChange(of: courtCount) { _, newValue in
                 maxPlayers = max(maxPlayers, newValue * 4)
             }
@@ -196,7 +229,8 @@ struct CreateSessionView: View {
                     skillLevel: skillLevel,
                     fixedPricePerPlayerVnd: pricingMode == .fixed ? pricePerPlayerVnd : nil,
                     repeatsWeekly: repeatsWeekly,
-                    imageUrls: imageUrls
+                    imageUrls: imageUrls,
+                    venueId: venueId
                 )
             )
             dismiss()

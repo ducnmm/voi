@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { SessionCard } from "@/lib/api-types";
 import type { Map as LeafletMap } from "leaflet";
 import { ErrorNote } from "./ui";
+import { sessionMapCoordinate } from "@/lib/normalization";
 export function SessionMap({
   sessions,
   selected,
@@ -34,12 +35,10 @@ export function SessionMap({
     import("leaflet")
       .then((L) => {
         if (disposed || !ref.current) return;
-        const points = sessions.filter(
-          (
-            session,
-          ): session is SessionCard & { venueLat: number; venueLng: number } =>
-            session.venueLat != null && session.venueLng != null,
-        );
+        const points = sessions.flatMap(session => {
+          const location = sessionMapCoordinate(session);
+          return location ? [{ ...session, venueLat: location.lat, venueLng: location.lng }] : [];
+        });
         const map = L.map(ref.current, {
           scrollWheelZoom: false,
           zoomControl: true,

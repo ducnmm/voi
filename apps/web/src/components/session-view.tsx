@@ -16,6 +16,7 @@ import { Dialog } from "./dialog";
 import { PhotoGallery } from "./photo-gallery";
 import { downloadCalendar } from "@/lib/calendar";
 import { SessionForm } from "./session-form";
+import { sessionMapCoordinate, sessionMapsHref } from "@/lib/normalization";
 const rsvpLabels: Record<string, string> = {
   JOINED: "Đã tham gia",
   MAYBE: "Có thể tham gia",
@@ -187,7 +188,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 <Icon name="pin" />
               </span>
               <div>
-                <h2>{session.venueName}</h2>
+                <h2>{session.venue?.name || session.venueName}</h2>
                 <p className="muted" style={{ marginTop: 5, fontSize: "var(--type-footnote)" }}>
                   {session.venueNote || t("Hẹn gặp bạn trên sân!")}
                 </p>
@@ -201,11 +202,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               <span className="chip">{t(skillLabels[session.skillLevel])}</span>
               <a
                 className="chip chip-green"
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.venueLat != null && session.venueLng != null ? `${session.venueLat},${session.venueLng}` : session.venueName)}`}
+                href={sessionMapsHref(session) ?? undefined}
                 target="_blank"
                 rel="noreferrer"
               >
-                {t("Chỉ đường ↗")}
+                {sessionMapCoordinate(session) ? t("Mở Google Maps") : t("Tìm sân trên Google Maps")}
               </a>
             </div>
           </section>

@@ -1,3 +1,5 @@
+import type { VenueSummary } from "./normalization";
+
 // Response DTO shapes returned by the Voi API.
 // These mirror apps/api/src/services/session-presenter.ts and the route handlers.
 // Request payload types are derived from the zod schemas in @voi/shared.
@@ -28,6 +30,8 @@ export interface GroupSummary {
   name: string;
   description: string | null;
   defaultVenueName: string | null;
+  defaultVenueId?: string | null;
+  defaultVenue?: VenueSummary | null;
   defaultSkillLevel: SkillLevel;
   currency: string;
   memberCount: number;
@@ -61,6 +65,8 @@ export interface GroupDetail {
   name: string;
   description: string | null;
   defaultVenueName: string | null;
+  defaultVenueId?: string | null;
+  defaultVenue?: VenueSummary | null;
   defaultSkillLevel: SkillLevel;
   currency: string;
   members: GroupMember[];
@@ -117,6 +123,8 @@ export interface SessionDetail {
   startsAt: string;
   endsAt: string;
   venueName: string;
+  venueId?: string | null;
+  venue?: VenueSummary | null;
   venueNote: string | null;
   courtCount: number;
   maxPlayers: number;

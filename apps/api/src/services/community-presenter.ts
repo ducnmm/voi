@@ -1,7 +1,9 @@
-import type { CommunityArea, CommunityListing, CommunitySource } from "@prisma/client";
+import type { CommunityArea, CommunityListing, CommunitySource, CommunitySkillRequirement } from "@prisma/client";
 import type { CommunityContact, CommunityEffectiveStatus, CommunityListingDTO } from "@voi/shared";
+import { presentSkillNormalization } from "./community-normalization.js";
+import { presentVenue, type VenueWithRefs } from "./venue-catalog.js";
 import { env } from "../config/env.js";
-export type CommunityListingWithSource = CommunityListing & { source: CommunitySource; area?: CommunityArea | null };
+export type CommunityListingWithSource = CommunityListing & { source: CommunitySource; area?: CommunityArea | null; skillRequirements?:CommunitySkillRequirement[];venue?:VenueWithRefs|null };
 export function communityEffectiveStatus(listing: Pick<CommunityListing, "publicationStatus" | "sourceStatus" | "startsAt">, now = new Date()): CommunityEffectiveStatus {
   if (listing.publicationStatus !== "PUBLISHED" || listing.sourceStatus === "DELETED") return "UNAVAILABLE";
   if (listing.sourceStatus === "CANCELLED") return "CANCELLED";
@@ -19,7 +21,8 @@ export function presentCommunityListing(row: CommunityListingWithSource, now = n
   return {
     id: row.id, title: row.title ?? "", description: row.description,
     startsAt: row.startsAt?.toISOString() ?? null, endsAt: row.endsAt?.toISOString() ?? null, timeZone: row.timeZone,
-    venueName: row.venueName, venueAddress: row.venueAddress, areaCode: row.areaCode, areaLabel: row.area?.label ?? null,
+    venueId:row.venueId,venue:row.venue?presentVenue(row.venue,now):null,skillNormalization:(()=>{const result=presentSkillNormalization(row);return {...result,requirements:result.requirements.map(({evidence:_evidence,...rule})=>rule)};})(),venueResolution:{status:row.venueResolutionStatus,version:row.venueResolverVersion,candidateIds:[]},
+    venueName: row.venue?.name??row.venueName, venueAddress: row.venue?.address??row.venueAddress, areaCode: row.areaCode, areaLabel: row.area?.label ?? null,
     skillLevel: row.skillLevel, skillText: row.skillText, feeVnd: row.feeVnd, feeBasis: row.feeBasis, feeText: row.feeText,
     requestedPlayers: row.requestedPlayers, organizerName: row.organizerName, contacts: row.contacts as CommunityContact[],
     source: { id: row.source.id, name: row.source.name, platform: row.source.platform, url: row.source.url },
@@ -35,6 +38,7 @@ export function presentIntegrationListing(row: CommunityListingWithSource, now =
     startsAt: row.startsAt?.toISOString() ?? null, observedAt: row.observedAt.toISOString(),
     sourceUpdatedAt: row.sourceUpdatedAt?.toISOString() ?? null, firstSeenAt: row.firstSeenAt.toISOString(),
     lastVerifiedAt: row.lastVerifiedAt.toISOString(), version: row.version,
+    skillNormalization:presentSkillNormalization(row),venueId:row.venueId,venue:row.venue?presentVenue(row.venue,now):null,venueResolution:{status:row.venueResolutionStatus,version:row.venueResolverVersion,candidateIds:row.venueCandidateIds},
     reviewReasons: row.reviewReasons, publicUrl: communityPublicUrl(row, row.source.publicEnabled)
   };
 }

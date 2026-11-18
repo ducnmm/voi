@@ -26,11 +26,13 @@ export async function runCommunityRetention(now = new Date(), actor = "retention
       },
       data: {
         publicationStatus: "SUPPRESSED", suppressionReason: "RETENTION_EXPIRED", anonymizedAt: now,
-        title: null, description: null, venueName: null, venueAddress: null,
+        title: null, description: null, venueName: null, venueAddress: null,venueId:null,venueMapsUrl:null,venueCandidateIds:[],venueResolutionStatus:"UNRESOLVED",
+        skillNormalizationStatus:"UNRESOLVED",skillNormalizationNotes:[],skillNormalizationReasons:[],
         organizerName: null, contacts: [], rawText: null, evidence: Prisma.DbNull,
         rawRetainedUntil: null, skillText: null, feeText: null, reviewReasons: [], duplicateCandidateIds: [],
       },
     });
+    await tx.communitySkillRequirement.deleteMany({where:{listing:{anonymizedAt:{not:null}}}});
     const reports = await tx.communityListingReport.updateMany({
       where: { createdAt: { lt: ninetyDays }, OR: [{ note: { not: null } }, { reporterContact: { not: null } }, { resolutionNote: { not: null } }] },
       data: { note: null, reporterContact: null, resolutionNote: null },

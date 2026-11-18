@@ -12,7 +12,7 @@ Content-Type: application/json
 
 `API_ORIGIN` là backend, ví dụ `http://localhost:43187` khi chạy local. Sau khi phiên bản này được triển khai lên Railway, dùng domain API hiện có của dự án. `/api/v1` là proxy của web, không dùng làm prefix của backend.
 
-Chi tiết JSON, lỗi và retry: [hợp đồng API](../specs/0015-community-listings/api-contract.md). Không dùng token Google/JWT của tài khoản Voi. Mỗi bot có client riêng; mỗi key chỉ truy cập nguồn và quyền được cấp.
+Chi tiết JSON, lỗi và retry hiện hành: [hợp đồng Muse v1/v2](muse-voi/API-CONTRACT.md), [hướng dẫn chạy](muse-voi/INSTRUCTIONS.md). Không dùng token Google/JWT của tài khoản Voi. Mỗi bot có client riêng; mỗi key chỉ truy cập nguồn và quyền được cấp.
 
 ## Chuẩn bị nguồn và cấp khóa
 
@@ -66,6 +66,8 @@ Chạy lại lệnh nhập với payload giữ nguyên để kiểm chứng `rep
 8. Chỉ gửi SOURCE_DELETED khi xác định bài bị xóa. Mất truy cập hoặc không thấy bài trong một lượt quét không phải bằng chứng xóa.
 9. Ghi nhận needs_review/rejected và lý do để xử lý; không retry mù. Bot không được khôi phục bài bị gỡ hay tự thêm nguồn.
 10. Không nhắn tin hay đăng bài thay người dùng trong luồng API này. Các thao tác Facebook do skill và quyền vận hành của Muse quyết định riêng.
+11. Lượt quan sát mới dùng schemaVersion 2 sau khi BE hỗ trợ; retry cũ giữ nguyên v1/v2 và payload. Đọc catalog rank/Venue, giữ chuỗi gốc; skillProposal/venueId là đề xuất và BE quyết định. Không tự đoán rank, gộp chi nhánh, thêm tọa độ hoặc đánh dấu sân đã xác minh.
+12. Giữ lịch 2 giờ đang có; không tạo lịch lặp thứ hai khi cập nhật skill. Backfill BE không làm mới observedAt/lastVerifiedAt của bài nguồn.
 
 ## Quản lý bài sai và retention
 

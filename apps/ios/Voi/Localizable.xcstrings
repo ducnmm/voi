@@ -1643,6 +1643,56 @@
           }
         }
       }
+    },
+    "Venue branch" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chi nhánh sân"
+          }
+        }
+      }
+    },
+    "Use entered venue name" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dùng tên sân tự nhập"
+          }
+        }
+      }
+    },
+    "No venue locations" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa có vị trí sân"
+          }
+        }
+      }
+    },
+    "Venue coordinates have not been verified." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa xác minh tọa độ sân."
+          }
+        }
+      }
+    },
+    "Find venue" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tìm sân"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

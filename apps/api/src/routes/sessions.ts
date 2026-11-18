@@ -10,6 +10,7 @@ import {
   SessionFeedQuerySchema,
   UpdateSessionSchema
 } from "@voi/shared";
+import {selectedNativeVenue,presentVenue} from "../services/venue-catalog.js";
 import { prisma } from "../db/prisma.js";
 import { env } from "../config/env.js";
 import { getAuthenticatedUserId } from "../plugins/auth.js";
@@ -85,6 +86,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
         ? { status: "SCHEDULED", endsAt: { gte: now } }
         : { endsAt: { lt: now }, status: { not: "DRAFT" } }),
       ...(query.skill ? { skillLevel: query.skill } : {}),
+      ...(query.venueId?{venueId:query.venueId}:{}),
       ...(query.venue
         ? { venueName: { contains: query.venue, mode: "insensitive" } }
         : {}),
@@ -199,6 +201,8 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
       const token = generateInviteToken();
       const maxPlayers = body.maxPlayers ?? body.courtCount * 4;
 
+      const selectedVenue=await selectedNativeVenue(prisma,body.venueId);
+      const location=selectedVenue?presentVenue(selectedVenue):null;
       const session = await prisma.session.create({
         data: {
           groupId: params.groupId,
@@ -206,7 +210,8 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
           title: body.title,
           startsAt,
           endsAt,
-          venueName: body.venueName,
+          venueName: selectedVenue?.name??body.venueName,
+          venueId:selectedVenue?.id??null,
           venueNote: body.venueNote,
           courtCount: body.courtCount,
           maxPlayers,
@@ -217,8 +222,8 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
           visibility: body.visibility,
           costTrackingEnabled: body.costTrackingEnabled,
           feePerPlayerVnd: body.feePerPlayerVnd,
-          venueLat: body.venueLat,
-          venueLng: body.venueLng,
+          venueLat: location?location.latitude:body.venueLat,
+          venueLng: location?location.longitude:body.venueLng,
           imageUrls: body.imageUrls ?? [],
           courts: {
             create: Array.from({ length: body.courtCount }, (_, index) => ({
@@ -355,13 +360,17 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
         const venueChanged =
           body.venueName !== undefined && body.venueName !== current.venueName;
 
+        const selectedVenue=await selectedNativeVenue(tx,body.venueId);
+        const location=selectedVenue?presentVenue(selectedVenue):null;
+        const detachVenue=body.venueId===null||(body.venueId===undefined&&body.venueName!==undefined&&body.venueName!==current.venueName);
         const updated = await tx.session.update({
           where: { id: current.id },
           data: {
             title: body.title,
             startsAt,
             endsAt,
-            venueName: body.venueName,
+            venueName: selectedVenue?.name??body.venueName,
+            venueId:selectedVenue?.id??(detachVenue?null:undefined),
             venueNote: body.venueNote,
             courtCount: nextCourtCount,
             maxPlayers: nextMaxPlayers,
@@ -371,8 +380,8 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
             visibility: body.visibility,
             costTrackingEnabled: body.costTrackingEnabled,
             feePerPlayerVnd: body.feePerPlayerVnd,
-            venueLat: body.venueLat,
-            venueLng: body.venueLng,
+            venueLat: location?location.latitude:detachVenue?body.venueLat??null:body.venueLat,
+            venueLng: location?location.longitude:detachVenue?body.venueLng??null:body.venueLng,
             imageUrls: body.imageUrls
           }
         });

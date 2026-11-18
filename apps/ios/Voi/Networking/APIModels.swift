@@ -58,6 +58,22 @@ struct OkResponse: Codable {
     let ok: Bool
 }
 
+struct VenueDTO: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let address: String?
+    let areaCode: String?
+    let latitude: Double?
+    let longitude: Double?
+    let mapsUrl: String
+    let locationVerified: Bool
+    let status: String
+}
+
+struct VenuesResponse: Codable {
+    let venues: [VenueDTO]
+}
+
 struct GroupsResponse: Codable {
     let groups: [GroupSummary]
 }
@@ -71,6 +87,8 @@ struct GroupSummary: Codable, Identifiable, Hashable {
     let name: String
     let description: String?
     let defaultVenueName: String?
+    var defaultVenueId: String? = nil
+    var defaultVenue: VenueDTO? = nil
     let defaultSkillLevel: SkillLevel
     let currency: String
     let memberCount: Int
@@ -110,6 +128,8 @@ struct GroupDetail: Codable, Identifiable, Hashable {
     let name: String
     let description: String?
     let defaultVenueName: String?
+    var defaultVenueId: String? = nil
+    var defaultVenue: VenueDTO? = nil
     let defaultSkillLevel: SkillLevel
     let currency: String
     let members: [Member]
@@ -120,6 +140,7 @@ struct CreateGroupRequest: Codable {
     let name: String
     let description: String?
     let defaultVenueName: String?
+    var defaultVenueId: String? = nil
     let defaultSkillLevel: SkillLevel
 }
 
@@ -140,6 +161,7 @@ struct CreateSessionRequest: Codable {
     let venueLat: Double?
     let venueLng: Double?
     let imageUrls: [String]?
+    var venueId: String? = nil
 }
 
 struct UpdateProfileRequest: Codable {
@@ -414,6 +436,28 @@ struct UpdateSessionRequest: Codable {
     let skillLevel: SkillLevel?
     let feePerPlayerVnd: Int?
     let imageUrls: [String]?
+    var venueId: String? = nil
+
+    enum CodingKeys: String, CodingKey {
+        case title, startsAt, endsAt, venueName, courtCount, maxPlayers, feeTotalVnd, shuttlecockCostVnd, skillLevel, feePerPlayerVnd, imageUrls, venueId
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(title, forKey: .title)
+        try container.encodeIfPresent(startsAt, forKey: .startsAt)
+        try container.encodeIfPresent(endsAt, forKey: .endsAt)
+        try container.encodeIfPresent(venueName, forKey: .venueName)
+        try container.encodeIfPresent(courtCount, forKey: .courtCount)
+        try container.encodeIfPresent(maxPlayers, forKey: .maxPlayers)
+        try container.encodeIfPresent(feeTotalVnd, forKey: .feeTotalVnd)
+        try container.encodeIfPresent(shuttlecockCostVnd, forKey: .shuttlecockCostVnd)
+        try container.encodeIfPresent(skillLevel, forKey: .skillLevel)
+        try container.encodeIfPresent(feePerPlayerVnd, forKey: .feePerPlayerVnd)
+        try container.encodeIfPresent(imageUrls, forKey: .imageUrls)
+        // Editing a matched venue back to free text explicitly detaches its identity.
+        try container.encode(venueId, forKey: .venueId)
+    }
 }
 
 struct UploadResponse: Codable {
@@ -616,6 +660,8 @@ struct SessionDTO: Codable, Identifiable, Hashable {
     let feePerPlayerVnd: Int?
     let venueLat: Double?
     let venueLng: Double?
+    var venueId: String? = nil
+    var venue: VenueDTO? = nil
     let status: String
     let createdAt: String
     let updatedAt: String

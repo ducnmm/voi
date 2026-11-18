@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import {presentVenue,type VenueWithRefs} from "./venue-catalog.js";
 import type { MatchResult } from "@prisma/client";
 import { calculatePerPlayerCostVnd, calculateTotalCostVnd } from "./cost.js";
 
@@ -14,6 +15,7 @@ export function presentMatchResult(result: MatchResult) {
 
 export const sessionInclude = Prisma.validator<Prisma.SessionInclude>()({
   group: true,
+  venue:{include:{externalRefs:true}},
   invites: true,
   courts: {
     orderBy: { sortOrder: "asc" },
@@ -45,6 +47,7 @@ export const sessionInclude = Prisma.validator<Prisma.SessionInclude>()({
 /** Feed cards: group + invite token + RSVP counts. No lineup or participant users. */
 export const sessionFeedInclude = Prisma.validator<Prisma.SessionInclude>()({
   group: { select: { id: true, name: true } },
+  venue:{include:{externalRefs:true}},
   participants: { select: { rsvpStatus: true } }
 });
 
@@ -89,6 +92,7 @@ function presentSessionCore(session: {
   startsAt: Date;
   endsAt: Date;
   venueName: string;
+  venueId?:string|null;venue?:VenueWithRefs|null;
   venueNote: string | null;
   courtCount: number;
   maxPlayers: number;
@@ -116,7 +120,8 @@ function presentSessionCore(session: {
     title: session.title,
     startsAt: session.startsAt.toISOString(),
     endsAt: session.endsAt.toISOString(),
-    venueName: session.venueName,
+    venueId:session.venueId??null,venue:session.venue?presentVenue(session.venue):null,
+    venueName: session.venue?.name??session.venueName,
     venueNote: session.venueNote,
     courtCount: session.courtCount,
     maxPlayers: session.maxPlayers,
@@ -127,8 +132,8 @@ function presentSessionCore(session: {
     visibility: session.visibility,
     costTrackingEnabled: session.costTrackingEnabled,
     feePerPlayerVnd: session.feePerPlayerVnd,
-    venueLat: session.venueLat,
-    venueLng: session.venueLng,
+    venueLat: session.venue?presentVenue(session.venue).latitude:session.venueLat,
+    venueLng: session.venue?presentVenue(session.venue).longitude:session.venueLng,
     imageUrls: session.imageUrls,
     status: session.status,
     createdAt: session.createdAt.toISOString(),

@@ -12,6 +12,13 @@ export async function buildTestApp(): Promise<FastifyInstance> {
 }
 
 const TABLES = [
+  "community_skill_requirements",
+  "venue_aliases",
+  "venue_external_refs",
+  "venues",
+  "skill_aliases",
+  "skill_ranks",
+  "skill_scales",
   "community_listing_reports",
   "community_ingest_operations",
   "community_listings",

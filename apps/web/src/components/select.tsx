@@ -66,8 +66,8 @@ export function Select({ value, onValueChange, children, className = "", disable
       <SelectPrimitive.Portal container={portalContainer}>
         <SelectPrimitive.Content ref={content} className="select-menu" style={{ minWidth: menuWidth }} position="popper" align="end" sideOffset={6}
           collisionPadding={12} onEscapeKeyDown={(event) => event.stopPropagation()}>
-          <SelectPrimitive.ScrollUpButton className="select-scroll select-scroll-up"><Icon name="chevron" size={14} /></SelectPrimitive.ScrollUpButton>
-          <SelectPrimitive.Viewport className="select-options">
+          {/* Dynamic Radix scroll buttons refocus the selected item on mount in WebKit. */}
+          <SelectPrimitive.Viewport className="select-options" style={{ scrollbarWidth: "thin" }}>
             {options.map((option) => (
               <SelectPrimitive.Item key={option.value} value={encode(option.value)} disabled={option.disabled}
                 textValue={optionText(option.label)} className="select-option">
@@ -76,7 +76,6 @@ export function Select({ value, onValueChange, children, className = "", disable
               </SelectPrimitive.Item>
             ))}
           </SelectPrimitive.Viewport>
-          <SelectPrimitive.ScrollDownButton className="select-scroll"><Icon name="chevron" size={14} /></SelectPrimitive.ScrollDownButton>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>
     </SelectPrimitive.Root>

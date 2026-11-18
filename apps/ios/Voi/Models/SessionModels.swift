@@ -101,6 +101,8 @@ struct SessionSummary: Identifiable, Hashable {
     var fixedPricePerPlayerVnd: Int? = nil
     /// When false, hide payment tracking UI (server `costTrackingEnabled`).
     var costTrackingEnabled: Bool = true
+    var venueId: String? = nil
+    var venue: VenueDTO? = nil
     var venueLat: Double? = nil
     var venueLng: Double? = nil
     var courts: [CourtLineup]
@@ -187,12 +189,28 @@ extension SessionSummary {
         return Int(ceil(Double(totalCostVnd) / Double(joinedPlayerCount)))
     }
 
-    /// Map pin for the venue. Prefers server lat/lng; falls back to mock coords.
-    var mapCoordinate: CLLocationCoordinate2D {
-        if let venueLat, let venueLng {
-            return CLLocationCoordinate2D(latitude: venueLat, longitude: venueLng)
+    /// A resolved venue never falls back to stale coordinates or demo locations.
+    var mapCoordinate: CLLocationCoordinate2D? {
+        let latitude: Double?
+        let longitude: Double?
+        if let venue {
+            guard venue.locationVerified else { return nil }
+            latitude = venue.latitude
+            longitude = venue.longitude
+        } else {
+            latitude = venueLat
+            longitude = venueLng
         }
-        return Mock.venueCoordinate(venueName)
+        guard let latitude, let longitude, latitude.isFinite, longitude.isFinite,
+              (-90...90).contains(latitude), (-180...180).contains(longitude) else { return nil }
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+    var venueSearchURL: URL? {
+        var components = URLComponents(string: "https://www.google.com/maps/search/")
+        let query = [venue?.name ?? venueName, venue?.address].compactMap { $0 }.joined(separator: ", ")
+        components?.queryItems = [URLQueryItem(name: "api", value: "1"), URLQueryItem(name: "query", value: query)]
+        return components?.url
     }
 }
 
@@ -468,7 +486,9 @@ extension SessionSummary {
         title = dto.title?.isEmpty == false ? dto.title! : dto.venueName
         startsAt = APIDateFormatter.date(from: dto.startsAt)
         endsAt = APIDateFormatter.date(from: dto.endsAt)
-        venueName = dto.venueName
+        venueName = dto.venue?.name ?? dto.venueName
+        venueId = dto.venueId
+        venue = dto.venue
         courtCount = dto.courtCount
         maxPlayers = dto.maxPlayers
         skillLevel = dto.skillLevel
@@ -539,6 +559,7 @@ struct CreateSessionDraft {
     let fixedPricePerPlayerVnd: Int?
     var repeatsWeekly: Bool = false
     var imageUrls: [String] = []
+    var venueId: String? = nil
 
     func shifted(byWeeks weeks: Int) -> CreateSessionDraft {
         let offset = TimeInterval(weeks * 7 * 24 * 60 * 60)
@@ -554,7 +575,8 @@ struct CreateSessionDraft {
             skillLevel: skillLevel,
             fixedPricePerPlayerVnd: fixedPricePerPlayerVnd,
             repeatsWeekly: false,
-            imageUrls: imageUrls
+            imageUrls: imageUrls,
+            venueId: venueId
         )
     }
 
@@ -577,7 +599,8 @@ struct CreateSessionDraft {
             feePerPlayerVnd: fixed,
             venueLat: nil,
             venueLng: nil,
-            imageUrls: imageUrls
+            imageUrls: imageUrls,
+            venueId: venueId
         )
     }
 
@@ -594,7 +617,8 @@ struct CreateSessionDraft {
             shuttlecockCostVnd: fixed == nil ? shuttlecockCostVnd : nil,
             skillLevel: skillLevel,
             feePerPlayerVnd: fixed,
-            imageUrls: imageUrls
+            imageUrls: imageUrls,
+            venueId: venueId
         )
     }
 }

@@ -19,6 +19,8 @@ import { Icon } from "./icon";
 import { Title, skillLabels } from "./primitives";
 import { SessionMap } from "./session-map";
 import { ErrorNote, Spinner } from "./ui";
+import { VenuePicker } from "./venue-picker";
+import { validVenueCoordinate } from "@/lib/normalization";
 function localTime(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
     .toISOString()
@@ -45,7 +47,8 @@ export function SessionForm({
     initialGroup ?? session?.groupId ?? "",
   );
   const [title, setTitle] = useState(session?.title ?? "");
-  const [venue, setVenue] = useState(session?.venueName ?? "");
+  const [venue, setVenue] = useState(session?.venue?.name ?? session?.venueName ?? "");
+  const [venueId, setVenueId] = useState<string | null>(session?.venueId ?? null);
   const [start, setStart] = useState(
     localTime(
       new Date(
@@ -104,6 +107,7 @@ export function SessionForm({
       const input: CreateSessionInput = {
         title: title.trim() || undefined,
         venueName: venue.trim(),
+        venueId,
         venueNote: note.trim() || undefined,
         ...(latitude !== "" && longitude !== ""
           ? { venueLat: Number(latitude), venueLng: Number(longitude) }
@@ -254,16 +258,14 @@ export function SessionForm({
                   placeholder={t("Cầu lông tối thứ Ba")}
                 />
               </label>
-              <label>
-                {t("Sân cầu lông")}
-                <input
-                  required
-                  maxLength={120}
-                  value={venue}
-                  onChange={(e) => setVenue(e.target.value)}
-                  placeholder={t("Tên sân của bạn")}
-                />
-              </label>
+              <VenuePicker name={venue} venueId={venueId} initialVenue={session?.venue}
+                onNameChange={name => { setVenue(name); setVenueId(null); setLatitude(""); setLongitude(""); }}
+                onSelect={selected => {
+                  setVenueId(selected?.id ?? null);
+                  if (selected) setVenue(selected.name);
+                  setLatitude(validVenueCoordinate(selected) ? String(selected.latitude) : "");
+                  setLongitude(validVenueCoordinate(selected) ? String(selected.longitude) : "");
+                }} />
               <label>
                 {t("Trình độ")}
                 <Select

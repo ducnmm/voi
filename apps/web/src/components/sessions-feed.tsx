@@ -14,6 +14,8 @@ import { Cover, Empty, Title, skillLabels } from "./primitives";
 import { Dialog } from "./dialog";
 import { ErrorNote, Spinner } from "./ui";
 import { CommunityListingCard } from "./community-feed";
+import { CommunityNormalizationFilters } from "./community-normalization-filters";
+import { emptyNormalizationFilters } from "@/lib/normalization";
 export function SessionsFeed({ manage = false }: { manage?: boolean }) {
   const { t } = useI18n();
 
@@ -27,6 +29,7 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
   const filterTrigger = useRef<HTMLButtonElement>(null);
   const [filters, setFilters] = useState(false);
   const [skill, setSkill] = useState("");
+  const [normalizedFilters, setNormalizedFilters] = useState(emptyNormalizationFilters);
   const [venue, setVenue] = useState("");
   const [venues, setVenues] = useState<string[]>([]);
   const [sort, setSort] = useState("date");
@@ -51,7 +54,7 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
   const nativeGeneration = useRef(0);
   const nativeMorePending = useRef(false);
   const communityEnabled = !manage && scope === "upcoming" && !saved && !available;
-  const community = useCommunityFeed(communityEnabled, skill);
+  const community = useCommunityFeed(communityEnabled, normalizedFilters.rank ? "" : skill, normalizedFilters);
   useEffect(() => {
     ++nativeGeneration.current;
     nativeMorePending.current = false;
@@ -92,7 +95,7 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
         .includes(search.toLocaleLowerCase("vi")),
     );
   const communityItems = community.listings
-    .filter((listing) => !skill || listing.skillLevel === skill)
+    .filter((listing) => !skill || Boolean(normalizedFilters.rank) || listing.skillLevel === skill)
     .filter((listing) => !venue || (listing.venueName ?? "").toLocaleLowerCase("vi").includes(venue.toLocaleLowerCase("vi")))
     .filter((listing) => `${listing.title} ${listing.venueName ?? ""} ${listing.venueAddress ?? ""} ${listing.areaLabel ?? ""} ${listing.source.name}`
       .toLocaleLowerCase("vi").includes(search.toLocaleLowerCase("vi")))
@@ -186,7 +189,7 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
             onClick={() => setFilters(!filters)}
             style={{
               color:
-                skill || venue || available ? "var(--color-brand)" : undefined,
+                skill || venue || available || normalizedFilters.rank || normalizedFilters.audience || normalizedFilters.venueId ? "var(--color-brand)" : undefined,
             }}
           >
             <Icon name="filter" size={19} />
@@ -273,6 +276,10 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
               ))}
             </Select>
           </label>
+          {!manage && scope === "upcoming" && !saved && <div className="community-normalization-filter-group">
+            <h3>{t("Lọc kèo cộng đồng")}</h3>
+            <CommunityNormalizationFilters value={normalizedFilters} onChange={setNormalizedFilters} />
+          </div>}
           <div className="share-actions">
             <button
               className="btn btn-secondary"
@@ -282,6 +289,7 @@ export function SessionsFeed({ manage = false }: { manage?: boolean }) {
                 setVenue("");
                 setAvailable(false);
                 setSort("date");
+                setNormalizedFilters(emptyNormalizationFilters);
               }}
             >
               {t("Đặt lại")}

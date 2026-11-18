@@ -2383,6 +2383,8 @@ a:focus-visible, button:focus-visible { outline-color: var(--color-focus); }
 .setting-select .select-chevron { color: var(--color-muted); }
 .select-menu {
   z-index: 6000;
+  display: flex;
+  flex-direction: column;
   min-width: 180px;
   max-width: calc(100vw - 24px);
   /* Fit either side of a centered 48px trigger without a resize-observer sizing cycle. */
@@ -2396,7 +2398,9 @@ a:focus-visible, button:focus-visible { outline-color: var(--color-focus); }
   box-shadow: none;
   transform-origin: var(--radix-select-content-transform-origin);
 }
-.select-options { padding: 0; }
+.select-options { min-height: 0; flex: 1; padding: 0; }
+.select-menu .select-options::-webkit-scrollbar { display: block; width: 6px; }
+.select-menu .select-options::-webkit-scrollbar-thumb { border-radius: 8px; background: var(--color-line); }
 .select-option {
   position: relative;
   display: flex;
@@ -2413,7 +2417,7 @@ a:focus-visible, button:focus-visible { outline-color: var(--color-focus); }
 .select-option[data-highlighted] { color: var(--color-brand); background: var(--color-sage); }
 .select-option[data-disabled] { color: var(--color-muted); opacity: .5; pointer-events: none; }
 .select-check { position: absolute; right: 12px; display: flex; }
-.select-scroll { display: grid; place-items: center; min-height: 24px; color: var(--color-muted); }
+.select-scroll { flex-shrink: 0; display: grid; place-items: center; min-height: 24px; color: var(--color-muted); }
 .select-scroll svg { transform: rotate(90deg); }
 .select-scroll-up svg { transform: rotate(-90deg); }
 
