@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready — người dùng đã duyệt triển khai, backfill, cập nhật Muse và deploy sau kiểm thử ngày 18/11/2026. Tiến độ và bằng chứng release ghi trong tasks/verification.
+Live — đã kiểm thử, push và deploy ngày 18/11/2026; backfill 251 bài, gắn 110 bài vào 38 sân. Trình độ chưa rõ và địa điểm mâu thuẫn giữ trạng thái review. Tiến độ và bằng chứng release ghi trong tasks/verification.
 
 ## Vấn đề và dữ liệu thực tế
 

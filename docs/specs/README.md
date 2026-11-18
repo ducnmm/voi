@@ -21,7 +21,7 @@ This folder contains the MVP feature specs. Each feature should have:
 | Spec | Status | Purpose |
 | --- | --- | --- |
 | [0015 Community Listings](0015-community-listings/spec.md) | Verified locally | Muse ingestion API and public discovery/contact flow; production rollout and real-source Muse pilot pending. |
-| [0016 Community Normalization](0016-community-normalization/spec.md) | Verified locally | Structured skill requirements, shared venue identities, matching and Maps links; [verification](0016-community-normalization/verification.md). |
+| [0016 Community Normalization](0016-community-normalization/spec.md) | Live | Structured skill requirements and shared venues; 251 posts backfilled, 110 linked to 38 venues; [verification](0016-community-normalization/verification.md). |
 
 See its [API contract](0015-community-listings/api-contract.md), [implementation tasks](0015-community-listings/tasks.md) and [Muse operator guide](../integrations/muse-community-listings.md).
 

@@ -73,133 +73,187 @@ struct CreateSessionView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Text(groupName)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(VoiColor.muted)
+            sessionForm
+                .navigationTitle(isEditing ? "Edit session" : "New Session")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { sessionToolbar }
+                .task(id: venueName) { await loadVenueOptions() }
+                .onChange(of: courtCount) { _, newValue in
+                    maxPlayers = max(maxPlayers, newValue * 4)
                 }
-
-                Section("Session") {
-                    TextField("Title", text: $title)
-                        .accessibilityIdentifier(A11y.Create.title)
-                    TextField("Venue", text: $venueName)
-                        .accessibilityIdentifier(A11y.Create.venue)
-                        .onChange(of: venueName) { _, value in
-                            if selectedVenue?.name != value { venueId = nil; selectedVenue = nil }
-                        }
-                    Picker("Venue branch", selection: Binding(get: { venueId ?? "" }, set: { id in
-                        let venue = venueOptions.first { $0.id == id } ?? (selectedVenue?.id == id ? selectedVenue : nil)
-                        selectedVenue = venue
-                        venueId = venue?.id
-                        if let venue { venueName = venue.name }
-                    })) {
-                        Text("Use entered venue name").tag("")
-                        ForEach(venueOptions) { venue in
-                            Text([venue.name, venue.address].compactMap { $0 }.joined(separator: " · ")).tag(venue.id)
-                        }
-                        if let selectedVenue, !venueOptions.contains(where: { $0.id == selectedVenue.id }) {
-                            Text(selectedVenue.name).tag(selectedVenue.id)
-                        }
-                    }
-                    .accessibilityIdentifier("create.venueBranch")
-                    if let address = selectedVenue?.address { Text(address).font(.footnote).foregroundStyle(VoiColor.muted) }
-                    Picker("Level", selection: $skillLevel) {
-                        ForEach(SkillLevel.allCases) { level in
-                            Text(level.label).tag(level)
-                        }
-                    }
+                .onChange(of: photoItems) { _, newItems in
+                    Task { await uploadPhotos(newItems) }
                 }
-
-                Section("Photos") {
-                    if !imageUrls.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: VoiSpacing.sm) {
-                                ForEach(imageUrls, id: \.self) { urlString in
-                                    photoThumb(urlString)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                    PhotosPicker(selection: $photoItems, maxSelectionCount: 6, matching: .images) {
-                        Label(photosLabel, systemImage: "photo.badge.plus")
-                            .foregroundStyle(VoiColor.court)
-                    }
-                    .buttonStyle(.plain)
+                .alert("Session", isPresented: isShowingError) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(errorMessage ?? "")
                 }
+        }
+    }
 
-                Section("Time") {
-                    DatePicker("Starts", selection: $startsAt)
-                    DatePicker("Ends", selection: $endsAt)
-                    if !isEditing {
-                        Toggle("Repeat weekly", isOn: $repeatsWeekly)
+    private var sessionForm: some View {
+        Form {
+            groupSection
+            sessionSection
+            photosSection
+            timeSection
+            capacitySection
+            costSection
+        }
+    }
+
+    private var groupSection: some View {
+        Section {
+            Text(groupName)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(VoiColor.muted)
+        }
+    }
+
+    private var sessionSection: some View {
+        Section("Session") {
+            TextField("Title", text: $title)
+                .accessibilityIdentifier(A11y.Create.title)
+            TextField("Venue", text: $venueName)
+                .accessibilityIdentifier(A11y.Create.venue)
+                .onChange(of: venueName) { _, value in
+                    if selectedVenue?.name != value {
+                        venueId = nil
+                        selectedVenue = nil
                     }
                 }
-
-                Section("Capacity") {
-                    Stepper("\(courtCount) courts", value: $courtCount, in: 1...8)
-                    Stepper("\(maxPlayers) players", value: $maxPlayers, in: minimumPlayerCount...80)
-                }
-
-                Section("Cost") {
-                    Picker("Pricing", selection: $pricingMode) {
-                        Text("Set price").tag(PricingMode.fixed)
-                        Text("Split costs").tag(PricingMode.split)
-                    }
-                    .pickerStyle(.segmented)
-
-                    if pricingMode == .fixed {
-                        Stepper("Price/player \(CurrencyFormatter.vnd(pricePerPlayerVnd))", value: $pricePerPlayerVnd, in: 0...2_000_000, step: 5_000)
-                    } else {
-                        Stepper("Court \(CurrencyFormatter.vnd(feeTotalVnd))", value: $feeTotalVnd, in: 0...5_000_000, step: 10_000)
-                        Stepper("Shuttles \(CurrencyFormatter.vnd(shuttlecockCostVnd))", value: $shuttlecockCostVnd, in: 0...2_000_000, step: 10_000)
-                    }
-                }
+            venueBranchPicker
+            if let address = selectedVenue?.address {
+                Text(address)
+                    .font(.footnote)
+                    .foregroundStyle(VoiColor.muted)
             }
-            .navigationTitle(isEditing ? "Edit session" : "New Session")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .accessibilityIdentifier(A11y.Create.cancel)
+            Picker("Level", selection: $skillLevel) {
+                ForEach(SkillLevel.allCases) { level in
+                    Text(level.label).tag(level)
                 }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(isEditing ? "Save" : "Create") {
-                        Task { await submit() }
-                    }
-                    .disabled(!canSubmit || isSaving)
-                    .accessibilityIdentifier(A11y.Create.submit)
-                }
-            }
-            .task(id: venueName) {
-                let query = venueName.trimmingCharacters(in: .whitespacesAndNewlines)
-                do {
-                    try await Task.sleep(for: .milliseconds(300))
-                    let response = try await environment.apiClient.venues(query: query)
-                    guard !Task.isCancelled else { return }
-                    venueOptions = response.venues
-                } catch { /* Free-form venue entry remains available offline. */ }
-            }
-            .onChange(of: courtCount) { _, newValue in
-                maxPlayers = max(maxPlayers, newValue * 4)
-            }
-            .onChange(of: photoItems) { _, newItems in
-                Task { await uploadPhotos(newItems) }
-            }
-            .alert(
-                "Session",
-                isPresented: Binding(
-                    get: { errorMessage != nil },
-                    set: { if !$0 { errorMessage = nil } }
-                )
-            ) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "")
             }
         }
+    }
+
+    private var venueBranchPicker: some View {
+        Picker("Venue branch", selection: venueSelection) {
+            Text("Use entered venue name").tag("")
+            ForEach(venueOptions) { venue in
+                Text(venueOptionLabel(venue)).tag(venue.id)
+            }
+            if let selectedVenue, !venueOptions.contains(where: { $0.id == selectedVenue.id }) {
+                Text(selectedVenue.name).tag(selectedVenue.id)
+            }
+        }
+        .accessibilityIdentifier("create.venueBranch")
+    }
+
+    private var venueSelection: Binding<String> {
+        Binding(
+            get: { venueId ?? "" },
+            set: { selectVenue($0) }
+        )
+    }
+
+    private func selectVenue(_ id: String) {
+        let venue = venueOptions.first { $0.id == id }
+            ?? (selectedVenue?.id == id ? selectedVenue : nil)
+        selectedVenue = venue
+        venueId = venue?.id
+        if let venue { venueName = venue.name }
+    }
+
+    private func venueOptionLabel(_ venue: VenueDTO) -> String {
+        guard let address = venue.address else { return venue.name }
+        return "\(venue.name) · \(address)"
+    }
+
+    private var photosSection: some View {
+        Section("Photos") {
+            if !imageUrls.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: VoiSpacing.sm) {
+                        ForEach(imageUrls, id: \.self) { urlString in
+                            photoThumb(urlString)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            PhotosPicker(selection: $photoItems, maxSelectionCount: 6, matching: .images) {
+                Label(photosLabel, systemImage: "photo.badge.plus")
+                    .foregroundStyle(VoiColor.court)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var timeSection: some View {
+        Section("Time") {
+            DatePicker("Starts", selection: $startsAt)
+            DatePicker("Ends", selection: $endsAt)
+            if !isEditing {
+                Toggle("Repeat weekly", isOn: $repeatsWeekly)
+            }
+        }
+    }
+
+    private var capacitySection: some View {
+        Section("Capacity") {
+            Stepper("\(courtCount) courts", value: $courtCount, in: 1...8)
+            Stepper("\(maxPlayers) players", value: $maxPlayers, in: minimumPlayerCount...80)
+        }
+    }
+
+    private var costSection: some View {
+        Section("Cost") {
+            Picker("Pricing", selection: $pricingMode) {
+                Text("Set price").tag(PricingMode.fixed)
+                Text("Split costs").tag(PricingMode.split)
+            }
+            .pickerStyle(.segmented)
+
+            if pricingMode == .fixed {
+                Stepper("Price/player \(CurrencyFormatter.vnd(pricePerPlayerVnd))", value: $pricePerPlayerVnd, in: 0...2_000_000, step: 5_000)
+            } else {
+                Stepper("Court \(CurrencyFormatter.vnd(feeTotalVnd))", value: $feeTotalVnd, in: 0...5_000_000, step: 10_000)
+                Stepper("Shuttles \(CurrencyFormatter.vnd(shuttlecockCostVnd))", value: $shuttlecockCostVnd, in: 0...2_000_000, step: 10_000)
+            }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var sessionToolbar: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel") { dismiss() }
+                .accessibilityIdentifier(A11y.Create.cancel)
+        }
+        ToolbarItem(placement: .confirmationAction) {
+            Button(isEditing ? "Save" : "Create") {
+                Task { await submit() }
+            }
+            .disabled(!canSubmit || isSaving)
+            .accessibilityIdentifier(A11y.Create.submit)
+        }
+    }
+
+    private var isShowingError: Binding<Bool> {
+        Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )
+    }
+
+    private func loadVenueOptions() async {
+        let query = venueName.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try await Task.sleep(for: .milliseconds(300))
+            let response = try await environment.apiClient.venues(query: query)
+            guard !Task.isCancelled else { return }
+            venueOptions = response.venues
+        } catch { /* Free-form venue entry remains available offline. */ }
     }
 
     private var minimumPlayerCount: Int { courtCount * 4 }

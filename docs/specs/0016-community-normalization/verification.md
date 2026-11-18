@@ -19,6 +19,7 @@ Ngày: 18/11/2026 (Asia/Ho_Chi_Minh).
 | Web production build/typecheck | Pass |
 | Chromium + WebKit UI | 30/30 pass, 0 skip; WebKit rank scroll có kiểm chứng bằng pointer thực |
 | iOS Simulator generic Debug build, không signing | BUILD SUCCEEDED |
+| iOS Simulator build-for-testing, app + UITest targets | TEST BUILD SUCCEEDED sau khi tách CreateSessionView thành các phần nhỏ |
 | Python Muse helper offline | 8/8 pass |
 | Python Muse helper → API test: catalog + V2 dry run | Pass; số listing và operation không đổi |
 
@@ -45,7 +46,18 @@ Các DB test tách biệt, tên chứa `_test_`; không dùng DB live cho test c
 4. Kiểm chứng catalog, public DTO, filters/statistics và health trên live.
 5. Chuyển bộ hướng dẫn Muse theo commit đã deploy; giữ lịch hai giờ đang có, retry cũ và phạm vi credential hiện có.
 
-Kết quả production sẽ được bổ sung sau rollout, không suy từ kết quả DB test.
+### Kết quả live ngày 18/11/2026
+
+- Code release: [`2fe99bb`](https://github.com/ducnmm/voi/commit/2fe99bb8366f8cb217545e18546d9839034d7aaf). API deployment `d4a1e38a-c3f3-42d7-8771-f9866f3a1323` và web deployment `67e36172-c6d8-442d-9d21-98745431d6f1` đều SUCCESS, cùng commit. Migration additive `20261118031500_community_normalization` đã áp dụng.
+- Snapshot production trước backfill tăng lên **251 bài** do các lượt nhập mới. Plan `a9a9795e-4b2c-42eb-8259-9e60db85f159` áp dụng lúc **11:09 giờ Việt Nam**: changed=251, unchanged=0, skipped=0.
+- Trình độ: **176 COMPLETE / 37 PARTIAL / 38 UNRESOLVED**, 608 requirement rows. Không còn bài thuộc phạm vi backfill thiếu normalization version.
+- Sân: **110 MATCHED / 137 UNRESOLVED / 3 SUGGESTED / 1 AMBIGUOUS**; danh mục có **38 Venue / 67 alias**. Không tạo tọa độ; cả 38 sân vẫn có locationVerified=false.
+- Đọc lại DB lúc 11:10: không field nguồn hoặc watermark nào thay đổi; số User/Group/Session giữ nguyên. Lặp cùng plan: changed=0, unchanged=251, skipped=0.
+- Kiểm tra HTTP lúc 11:14: API và web 200; catalog 8 rank/38 sân. Feed đang tuyển có 67 bài; phân trang không trùng và không lộ evidence/rawText/hash nội bộ. Bộ lọc TBY trả 37 bài cho MALE và 40 bài cho FEMALE, khớp thống kê distinct posts; bộ lọc Venue chỉ trả đúng sân đã chọn.
+- Muse xác nhận lúc 11:14 đã tải bộ bàn giao từ commit release, cập nhật tại chỗ task `voi-scan-import-2h`, giữ lịch mỗi hai giờ/Asia/Ho_Chi_Minh và năm nguồn. Hướng dẫn mới dùng schemaVersion=2 cho quan sát mới, giữ nguyên retry/checkpoint cũ, bắt buộc evidence.skill và không đoán rank/chi nhánh/tọa độ. Muse đọc catalog qua credential Secure Vault hiện có: 8 rank, 38 sân (TP.HCM 23, Hà Nội 9, Đà Nẵng 6). Không đổi quyền hay hạn khóa; lượt kế tiếp được Muse báo khoảng 11:24. Đây là xác nhận cấu hình/catalog, không phải bằng chứng một lượt quét v2 toàn bộ đã hoàn tất.
+- GitHub CI job API pass. Lượt iOS E2E đầu trên Xcode 26.3 dừng ở compile do CreateSessionView quá phức tạp để type-check; đã tách Form/venue picker thành các phần nhỏ, giữ nguyên hành vi và accessibility IDs. Local build-for-testing đã biên dịch thành công cả app và UITest targets. Kết quả chạy E2E trên CI được theo dõi riêng, không suy từ build local.
+
+Báo cáo máy đọc được được giữ trong `scratch/community-normalization-20261118/production-{plan,apply,verify}.json` và `production-http-verification.json` tại workspace vận hành. Các file này không đưa lên Git vì chứa snapshot nguồn. QA API/web và container Postgres test riêng đã được dọn sau kiểm chứng.
 
 ## Các trường hợp còn giữ review
 
